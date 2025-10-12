@@ -37,6 +37,8 @@
 -- • vnav - For navigation and pathfinding capabilities
 -- • BardToolbox (BTB) - For party management
 
+-- Dalamud Profile called "BTB" only using BardToolBox
+
 require("dfunc")
 require("xafunc")
 
@@ -1323,4 +1325,5 @@ end
 EchoXA("[Helper] === HELPER AUTOMATION ENDED ===")
 
 EchoXA("[Helper] All runs completed or script manually stopped")
+
 
