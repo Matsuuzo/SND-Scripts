@@ -426,7 +426,7 @@ local function ResetRotation()
     EchoXA("[DailyReset] Helper 3: " .. currentHelper3)
     
     -- Relog to first character
-    if PerformCharacterRelog(charConfigs[1][1][1], maxRelogattempts) then
+    if ARRelogXA(charConfigs[1][1][1]) then
         EnableTextAdvanceXA()
         SleepXA(2)
         return true
@@ -674,43 +674,6 @@ local function VerifyCharacterSwitch(expectedName)
     return false
 end
 
-local function PerformCharacterRelog(targetChar, maxRetries)
-    if not targetChar or targetChar == "" then
-        EchoXA("[RelogAuto] ERROR: No target character specified")
-        return false
-    end
-    
-    maxRetries = maxRetries or maxRelogattempts
-    local expectedName = targetChar:match("^([^@]+)")
-    
-    if not expectedName then
-        EchoXA("[RelogAuto] ERROR: Could not extract character name from: " .. targetChar)
-        return false
-    end
-
-    for attempt = 1, maxRetries do
-        EchoXA("[RelogAuto] " .. (attempt == 1 and "Relogging to " or "Retry " .. (attempt-1) .. " - Relogging to ") .. targetChar)
-        ARRelogXA(targetChar)
-        SleepXA(relogWaitTime)
-        
-        if VerifyCharacterSwitch(expectedName) then
-            dcTravelCompleted = false
-            wasInDuty = false
-            adRunActive = false
-            EchoXA("[RelogAuto] Character state reset complete")
-            return true
-        end
-        
-        if attempt < maxRetries then
-            EchoXA("[RelogAuto] Retrying relog in 5 seconds...")
-            SleepXA(5)
-        end
-    end
-    
-    EchoXA("[RelogAuto] FATAL: Character switch failed after " .. maxRetries .. " attempts!")
-    return false
-end
-
 local function getCharIndex(name)
     if not name or name == "" then
         return nil
@@ -760,7 +723,7 @@ local function attemptCharacterLogin(targetIdx)
     local targetChar = charConfigs[targetIdx][1][1]
     EchoXA("[RelogAuto] Attempting to log into: " .. targetChar)
     
-    if PerformCharacterRelog(targetChar, maxRelogattempts) then
+    if ARRelogXA(targetChar) then
         return true
     else
         failedCharacters[targetChar] = true
@@ -1321,3 +1284,4 @@ end
 
 EchoXA("[RelogAuto] === AD RELOG AUTOMATION ENDED ===")
 EchoXA("[RelogAuto] All characters processed or script manually stopped")
+
