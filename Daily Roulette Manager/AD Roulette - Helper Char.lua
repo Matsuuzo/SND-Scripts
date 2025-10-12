@@ -22,8 +22,9 @@
 -- ╚═╝  ╚═╝╚══════╝╚══════╝╚═╝     ╚═╝╚═╝  ╚═══╝ ╚═════╝ 
 --
 -- Automatically handles character rotation, DC travel, party verification, and duty automation
--- Version: 1.0.19
+-- Version: 1.1.0
 -- Last Updated: 2025-10-12
+-- Added: Death handler, improved daily reset handling, midnight flag reset
 
 ----------------------------------------------------------------------------------------------------------------------------
 ---- PLUGIN REQUIREMENTS ----
@@ -51,8 +52,6 @@ local helperConfigs = {
 {{"Helper One@World"}, "Inviting CharOne"},
 {{"Helper Two@World"}, "Inviting CharTwo"},
 {{"Helper Three@World"}, "Inviting CharThree"}
-
-
 }
 
 -- DC Travel Configuration
@@ -74,13 +73,15 @@ local originalHelperForSubmarines = nil         -- Track which helper we need to
 
 -- Daily Reset Configuration
 local dailyResetHour = 17                     -- Reset hour in UTC+1 (17:00 = 5 PM)
-local dailyResetCheckInterval = 60           -- Check every 60 seconds
+local dailyResetCheckInterval = 10            -- Check every 10 seconds when waiting for reset
 local lastDailyResetCheck = 0
-local dailyResetTriggered = false            -- Track if reset has been triggered today
+local dailyResetTriggered = false            -- Track if reset has been triggered today (resets at midnight)
+local lastMidnightCheck = 0
+local midnightCheckInterval = 60             -- Check for midnight every 60 seconds
 local allHelpersCompleted = false            -- Track if all helpers are done
 
 -- =======================================
--- DO NOT THOSE ANYTHING BELOW THIS
+-- DO NOT TOUCH ANYTHING BELOW THIS
 -- =======================================
 
 -- Relog settings
@@ -91,6 +92,10 @@ local dutyDelay = 3
 -- Movement check interval (in seconds)
 local movementCheckInterval = 60
 local lastMovementCheck = 0
+
+-- Death tracking
+local lastDeathCheck = 0
+local deathCheckInterval = 1  -- Check every second
 
 -- Internal state tracking
 local currentHelper = helperConfigs[1] and helperConfigs[1][1] and helperConfigs[1][1][1] and tostring(helperConfigs[1][1][1]):lower() or ""
@@ -106,6 +111,60 @@ local dcTravelCompleted = false
 local waitingForInvite = false
 local consecutiveTimeouts = 0     -- Track consecutive timeout skips
 local maxConsecutiveTimeouts = 2  -- Allow 2 timeouts before Multi Mode
+
+-- ===============================================
+-- Death Handler Functions
+-- ===============================================
+
+local function IsPlayerDead()
+    if Svc and Svc.Condition then
+        if type(Svc.Condition.IsDeath) == "function" then
+            local ok, res = pcall(Svc.Condition.IsDeath, Svc.Condition)
+            if ok then return res end
+        end
+        -- fallback: condition index 2
+        return Svc.Condition[2] == true
+    end
+    return false
+end
+
+local function HandleDeath()
+    EchoXA("[Death] Player death detected - initiating revival...")
+    
+    -- Wait for SelectYesno dialog to appear
+    SleepXA(1.5)
+    
+    -- Click Yes on revival prompt
+    SelectYesnoXA()
+    
+    -- Wait for player to be alive again
+    local attempts = 0
+    local maxAttempts = 30  -- 30 seconds timeout
+    
+    while IsPlayerDead() and attempts < maxAttempts do
+        SleepXA(1)
+        attempts = attempts + 1
+    end
+    
+    if attempts >= maxAttempts then
+        EchoXA("[Death] WARNING: Revival timeout - player may still be dead")
+        return false
+    end
+    
+    EchoXA("[Death] Player revived successfully")
+    
+    -- Wait for character to stabilize
+    SleepXA(2)
+    
+    -- Restart AutoDuty if we were in a duty
+    if adRunActive then
+        EchoXA("[Death] Restarting AutoDuty after death...")
+        adXA("start")
+        SleepXA(1)
+    end
+    
+    return true
+end
 
 -- ===============================================
 -- Party Verification Functions
@@ -255,22 +314,33 @@ end
 -- Daily Reset Functions
 -- ===============================================
 
-local function CheckDailyReset()
+local function CheckMidnight()
     local currentTime = os.date("*t")
     local currentHour = currentTime.hour
-    local currentMinute = currentTime.min
     
-    -- Check if it's 17:00 UTC+1 (5 PM)
-    if currentHour == dailyResetHour and currentMinute == 0 then
-        if not dailyResetTriggered then
-            EchoXA("[DailyReset] === DAILY RESET TIME DETECTED (17:00 UTC+1) ===")
-            return true
-        end
+    -- Reset the dailyResetTriggered flag after midnight (when hour < dailyResetHour)
+    if currentHour < dailyResetHour and dailyResetTriggered then
+        EchoXA("[DailyReset] === MIDNIGHT PASSED - RESET FLAG CLEARED ===")
+        EchoXA("[DailyReset] Daily reset will be available again at " .. dailyResetHour .. ":00")
+        dailyResetTriggered = false
+        return true
     end
     
-    -- Reset the trigger flag after 17:00 has passed
-    if currentHour ~= dailyResetHour then
-        dailyResetTriggered = false
+    return false
+end
+
+local function CheckDailyReset()
+    -- Don't trigger if already triggered today
+    if dailyResetTriggered then
+        return false
+    end
+    
+    local currentTime = os.date("*t")
+    local currentHour = currentTime.hour
+    
+    -- Check if it's past 17:00 UTC+1
+    if currentHour >= dailyResetHour then
+        return true
     end
     
     return false
@@ -287,7 +357,7 @@ local function ResetRotation()
     
     -- Reset flags
     allHelpersCompleted = false
-    dailyResetTriggered = true
+    -- Don't reset dailyResetTriggered here - it stays true until midnight
     
     -- Reset to first helper
     idx = 1
@@ -303,8 +373,8 @@ local function ResetRotation()
     EchoXA("[DailyReset] First helper: " .. helperConfigs[1][1][1])
     EchoXA("[DailyReset] Expected toon: " .. currentToon)
     
-    -- Relog to first helper using xafunc
-    if ARRelogXA(helperConfigs[1][1][1]) then
+    -- Relog to first helper
+    if PerformCharacterRelog(helperConfigs[1][1][1], maxRelogAttempts) then
         EnableTextAdvanceXA()
         SleepXA(2)
         return true
@@ -687,7 +757,7 @@ local function switchToNextHelper()
         EnableARMultiXA()
         allHelpersCompleted = true
         
-        EchoXA("[Helper] Multi Mode enabled - waiting for daily reset at 17:00 UTC+1")
+        EchoXA("[Helper] Multi Mode enabled - waiting for daily reset at " .. dailyResetHour .. ":00 UTC+1")
         return false
     end
     
@@ -703,7 +773,7 @@ local function switchToNextHelper()
         EnableARMultiXA()
         allHelpersCompleted = true
         
-        EchoXA("[Helper] Multi Mode enabled - waiting for daily reset at 17:00 UTC+1")
+        EchoXA("[Helper] Multi Mode enabled - waiting for daily reset at " .. dailyResetHour .. ":00 UTC+1")
         return false
     end
     
@@ -913,6 +983,7 @@ local loginSuccess = false
 local currentIdx = idx
 
 EchoXA("[Helper] === STARTING HELPER AUTOMATION WITH ROTATION ===")
+EchoXA("[Helper] Daily Reset Time: " .. dailyResetHour .. ":00 UTC+1")
 EchoXA("[Helper] Starting helper rotation...")
 reportRotationStatus()
 
@@ -972,40 +1043,52 @@ EchoXA("[Helper] === ENTERING MAIN LOOP ===")
 while rotationStarted do
     local inDuty = false
     
-    -- === DAILY RESET CHECK ===
-    local currentTime = os.time()
-    if currentTime - lastDailyResetCheck >= dailyResetCheckInterval then
-        lastDailyResetCheck = currentTime
-        
-        if CheckDailyReset() then
-            EchoXA("[DailyReset] === DAILY RESET TRIGGERED ===")
-            
-            if allHelpersCompleted then
-                DisableARMultiXA()
-                SleepXA(2)
-            end
-            
-            if ResetRotation() then
-                allHelpersCompleted = false
-                
-                local initSuccess = InitializeHelper()
-                
-                while not initSuccess and rotationStarted do
-                    EchoXA("[Helper] Helper skipped after reset - trying next helper...")
-                    if not switchToNextHelper() then
-                        EchoXA("[Helper] All helpers already completed after reset.")
-                        allHelpersCompleted = true
-                        break
-                    end
-                    initSuccess = InitializeHelper()
-                end
-            else
-                EchoXA("[DailyReset] ERROR: Failed to reset rotation")
-            end
-        end
+    -- === DEATH CHECK ===
+    if IsPlayerDead() then
+        EchoXA("[Death] === DEATH DETECTED ===")
+        HandleDeath()
     end
     
+    -- === MIDNIGHT CHECK (Reset the dailyResetTriggered flag) ===
+    local currentTime = os.time()
+    if currentTime - lastMidnightCheck >= midnightCheckInterval then
+        lastMidnightCheck = currentTime
+        CheckMidnight()
+    end
+    
+    -- === DAILY RESET CHECK (when all helpers are done and waiting) ===
     if allHelpersCompleted then
+        if currentTime - lastDailyResetCheck >= dailyResetCheckInterval then
+            lastDailyResetCheck = currentTime
+            
+            if CheckDailyReset() and not dailyResetTriggered then
+                EchoXA("[DailyReset] === DAILY RESET TRIGGERED (All Helpers Idle) ===")
+                dailyResetTriggered = true
+                
+                DisableARMultiXA()
+                SleepXA(2)
+                
+                if ResetRotation() then
+                    allHelpersCompleted = false
+                    
+                    local initSuccess = InitializeHelper()
+                    
+                    while not initSuccess and rotationStarted do
+                        EchoXA("[Helper] Helper skipped after reset - trying next helper...")
+                        if not switchToNextHelper() then
+                            EchoXA("[Helper] All helpers already completed after reset.")
+                            allHelpersCompleted = true
+                            break
+                        end
+                        initSuccess = InitializeHelper()
+                    end
+                else
+                    EchoXA("[DailyReset] ERROR: Failed to reset rotation")
+                end
+            end
+        end
+        
+        -- If all helpers completed, just sleep and continue checking for reset
         SleepXA(5)
         goto continue_loop
     end
@@ -1055,6 +1138,43 @@ while rotationStarted do
         EchoXA("[Helper] Returning to homeworld...")
         ReturnToHomeworld()
         SleepXA(2)
+        
+        -- === CHECK FOR DAILY RESET AFTER DUTY ===
+        if CheckDailyReset() and not dailyResetTriggered then
+            EchoXA("[DailyReset] === DAILY RESET DETECTED AFTER DUTY COMPLETION ===")
+            dailyResetTriggered = true
+            
+            EchoXA("[DailyReset] Current helper completed duty after reset time")
+            EchoXA("[DailyReset] Marking current helper as completed for today...")
+            local actualHelperName = helperConfigs[idx][1][1]
+            completedHelpers[actualHelperName] = true
+            
+            EchoXA("[DailyReset] Resetting rotation to first helper...")
+            if allHelpersCompleted then
+                DisableARMultiXA()
+                SleepXA(2)
+            end
+            
+            if ResetRotation() then
+                allHelpersCompleted = false
+                
+                local initSuccess = InitializeHelper()
+                
+                while not initSuccess and rotationStarted do
+                    EchoXA("[Helper] Helper skipped after reset - trying next helper...")
+                    if not switchToNextHelper() then
+                        EchoXA("[Helper] All helpers already completed after reset.")
+                        allHelpersCompleted = true
+                        break
+                    end
+                    initSuccess = InitializeHelper()
+                end
+                
+                goto continue_loop
+            else
+                EchoXA("[DailyReset] ERROR: Failed to reset rotation")
+            end
+        end
         
         -- === DUTY COMPLETION VERIFICATION ===
         EchoXA("[Helper] === VERIFYING DUTY COMPLETION ===")
@@ -1323,7 +1443,4 @@ while rotationStarted do
 end
 
 EchoXA("[Helper] === HELPER AUTOMATION ENDED ===")
-
 EchoXA("[Helper] All runs completed or script manually stopped")
-
-
