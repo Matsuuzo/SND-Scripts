@@ -8,6 +8,7 @@
 ----------------------------------------------------------------------------------------------------------------------------
 -- REQUIRED PLUGINS:
 -- • TextAdvance - For automatic text interaction
+-- • Autoduty - For Automatic Duty handling
 -- • AutoRetainer - For character switching and relog functionality
 -- • Lifestream - For world travel and DC travel systems
 -- • BossMod (Veyn) - For combat mechanics handling
@@ -1298,4 +1299,5 @@ while rotationStarted do
 end
 
 EchoXA("[Helper] === HELPER AUTOMATION ENDED ===")
+
 EchoXA("[Helper] All runs completed or script manually stopped")
