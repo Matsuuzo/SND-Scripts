@@ -374,7 +374,7 @@ local function ResetRotation()
     EchoXA("[DailyReset] Expected toon: " .. currentToon)
     
     -- Relog to first helper
-    if PerformCharacterRelog(helperConfigs[1][1][1], maxRelogAttempts) then
+    if ARRelogXA(helperConfigs[1][1][1]) then
         EnableTextAdvanceXA()
         SleepXA(2)
         return true
@@ -616,49 +616,6 @@ local function VerifyCharacterSwitch(expectedName)
     return false
 end
 
-local function PerformCharacterRelog(targetChar, maxRetries)
-    if not targetChar or targetChar == "" then
-        EchoXA("[Helper] ERROR: No target character specified")
-        return false
-    end
-    
-    maxRetries = maxRetries or maxRelogAttempts
-    local expectedName = targetChar:match("^([^@]+)")
-    
-    if not expectedName then
-        EchoXA("[Helper] ERROR: Could not extract character name from: " .. targetChar)
-        return false
-    end
-
-    for attempt = 1, maxRetries do
-        if attempt == 1 then
-            EchoXA("[Helper] Relogging to " .. targetChar)
-        else
-            EchoXA("[Helper] Retry " .. (attempt-1) .. " - Relogging to " .. targetChar)
-        end
-        
-        -- Use xafunc ARRelogXA which includes all necessary waits
-        if ARRelogXA(targetChar) then
-            if VerifyCharacterSwitch(expectedName) then
-                dcTravelCompleted = false
-                wasInDuty = false
-                adRunActive = false
-                waitingForInvite = false
-                EchoXA("[Helper] Character state reset complete")
-                return true
-            end
-        end
-        
-        if attempt < maxRetries then
-            EchoXA("[Helper] Retrying relog in 5 seconds...")
-            SleepXA(5)
-        end
-    end
-    
-    EchoXA("[Helper] FATAL: Character switch failed after " .. maxRetries .. " attempts!")
-    return false
-end
-
 local function getHelperIndex(name)
     if not name or name == "" then
         return nil
@@ -712,7 +669,7 @@ local function attemptHelperLogin(targetIdx)
     local targetHelper = helperConfigs[targetIdx][1][1]
     EchoXA("[Helper] Attempting to log into: " .. targetHelper)
     
-    if PerformCharacterRelog(targetHelper, maxRelogAttempts) then
+    if ARRelogXA(targetHelper) then
         return true
     else
         failedHelpers[targetHelper] = true
@@ -932,7 +889,7 @@ local function InitializeHelper()
         
         -- Switch to the correct helper
         EchoXA("[Helper] Switching to correct helper: " .. foundHelper)
-        if PerformCharacterRelog(foundHelper, maxRelogAttempts) then
+        if ARRelogXA(foundHelper) then
             -- Clear skip flag if it was set
             if skippedHelpers[foundHelper] then
                 EchoXA("[Helper] Clearing skip flag for: " .. foundHelper)
@@ -1270,7 +1227,7 @@ while rotationStarted do
                 end
                 
                 -- Switch to correct helper
-                if PerformCharacterRelog(foundHelper, maxRelogAttempts) then
+                if ARRelogXA(foundHelper) then
                     -- Clear skip flag if it was set
                     if skippedHelpers[foundHelper] then
                         EchoXA("[Helper] Clearing skip flag for: " .. foundHelper)
@@ -1444,3 +1401,4 @@ end
 
 EchoXA("[Helper] === HELPER AUTOMATION ENDED ===")
 EchoXA("[Helper] All runs completed or script manually stopped")
+
