@@ -42,6 +42,8 @@
 -- • vnav - For navigation and pathfinding capabilities
 -- • BardToolbox (BTB) - For party invite/disband functionality
 
+-- Dalamud Profile called "BTB" only using BardToolBox
+
 require("dfunc")
 require("xafunc")
 
@@ -1195,4 +1197,5 @@ while rotationStarted do
 end
 
 EchoXA("[RelogAuto] === AD RELOG AUTOMATION ENDED ===")
+
 EchoXA("[RelogAuto] All characters processed or script manually stopped")
