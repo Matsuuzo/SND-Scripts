@@ -660,7 +660,7 @@ local function getNextAvailableHelper(currentIdx)
         
         attempts = attempts + 1
     end
-    
+
     EchoXA("[Helper] DEBUG: No available helpers found in remaining list")
     return nil, nil
 end
@@ -1401,4 +1401,5 @@ end
 
 EchoXA("[Helper] === HELPER AUTOMATION ENDED ===")
 EchoXA("[Helper] All runs completed or script manually stopped")
+
 
