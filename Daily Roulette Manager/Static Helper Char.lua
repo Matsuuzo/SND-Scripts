@@ -1,5 +1,6 @@
 -- Helper Character Duty Script
 -- Automatically handles /ad run and /vnav stop when entering duty
+-- V 1.0
 
 require("dfunc")
 require("xafunc")
@@ -49,3 +50,4 @@ while true do
     wasInDuty = inDuty
     SleepXA(1) -- Small delay to prevent high CPU usage
 end
+
