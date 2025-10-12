@@ -24,9 +24,11 @@
 -- Advanced multi-character AD roulette automation script with intelligent party management and DC travel.
 -- Automatically handles character rotation, DC travel, duty roulette queuing, and multi-helper verification.
 --
--- Matsuuzo AD Automation (Inviting) v1.3.0
+-- Dream AD Automation (Inviting) v1.4.0
 -- Last Updated: 2025-10-12
--- Added: Multi-helper verification (3 helpers), simplified helper naming, improved xafunc integration
+-- Added: Death handler with automatic revival and AutoDuty restart
+-- Added: Improved daily reset handling with midnight flag reset
+-- Added: Enhanced Multi Mode logic after all characters complete
 --
 ----------------------------------------------------------------------------------------------------------------------------
 
@@ -91,9 +93,11 @@ local originalCharForSubmarines = nil
 
 -- Daily Reset Configuration
 local dailyResetHour = 17                     -- Reset hour in UTC+1 (17:00 = 5 PM)
-local dailyResetCheckInterval = 60           -- Check every 60 seconds
+local dailyResetCheckInterval = 10            -- Check every 10 seconds when waiting for reset
 local lastDailyResetCheck = 0
-local dailyResetTriggered = false
+local dailyResetTriggered = false            -- Track if reset has been triggered today (resets at midnight)
+local lastMidnightCheck = 0
+local midnightCheckInterval = 60             -- Check for midnight every 60 seconds
 local allCharactersCompleted = false
 
 -- ==========================================
@@ -109,6 +113,10 @@ local dutyDelay = 3
 local movementCheckInterval = 60
 local lastMovementCheck = 0
 
+-- Death tracking
+local lastDeathCheck = 0
+local deathCheckInterval = 1  -- Check every second
+
 -- Internal state tracking
 local currentChar = charConfigs[1] and charConfigs[1][1] and charConfigs[1][1][1] and tostring(charConfigs[1][1][1]):lower() or ""
 local currentHelper1 = charConfigs[1] and charConfigs[1][2] and tostring(charConfigs[1][2]) or ""
@@ -121,6 +129,60 @@ local adRunActive = false
 local failedCharacters = {}
 local completedCharacters = {}
 local dcTravelCompleted = false
+
+-- ===============================================
+-- Death Handler Functions
+-- ===============================================
+
+local function IsPlayerDead()
+    if Svc and Svc.Condition then
+        if type(Svc.Condition.IsDeath) == "function" then
+            local ok, res = pcall(Svc.Condition.IsDeath, Svc.Condition)
+            if ok then return res end
+        end
+        -- fallback: condition index 2
+        return Svc.Condition[2] == true
+    end
+    return false
+end
+
+local function HandleDeath()
+    EchoXA("[Death] Player death detected - initiating revival...")
+    
+    -- Wait for SelectYesno dialog to appear
+    SleepXA(1.5)
+    
+    -- Click Yes on revival prompt
+    SelectYesnoXA()
+    
+    -- Wait for player to be alive again
+    local attempts = 0
+    local maxAttempts = 30  -- 30 seconds timeout
+    
+    while IsPlayerDead() and attempts < maxAttempts do
+        SleepXA(1)
+        attempts = attempts + 1
+    end
+    
+    if attempts >= maxAttempts then
+        EchoXA("[Death] WARNING: Revival timeout - player may still be dead")
+        return false
+    end
+    
+    EchoXA("[Death] Player revived successfully")
+    
+    -- Wait for character to stabilize
+    SleepXA(2)
+    
+    -- Restart AutoDuty if we were in a duty
+    if adRunActive then
+        EchoXA("[Death] Restarting AutoDuty after death...")
+        adXA("start")
+        SleepXA(1)
+    end
+    
+    return true
+end
 
 -- ===============================================
 -- Party Verification Functions
@@ -302,22 +364,33 @@ end
 -- Daily Reset Functions
 -- ===============================================
 
-local function CheckDailyReset()
+local function CheckMidnight()
     local currentTime = os.date("*t")
     local currentHour = currentTime.hour
-    local currentMinute = currentTime.min
     
-    -- Check if it's 17:00 UTC+1 (5 PM)
-    if currentHour == dailyResetHour and currentMinute == 0 then
-        if not dailyResetTriggered then
-            EchoXA("[DailyReset] === DAILY RESET TIME DETECTED (17:00 UTC+1) ===")
-            return true
-        end
+    -- Reset the dailyResetTriggered flag after midnight (when hour < dailyResetHour)
+    if currentHour < dailyResetHour and dailyResetTriggered then
+        EchoXA("[DailyReset] === MIDNIGHT PASSED - RESET FLAG CLEARED ===")
+        EchoXA("[DailyReset] Daily reset will be available again at " .. dailyResetHour .. ":00")
+        dailyResetTriggered = false
+        return true
     end
     
-    -- Reset the trigger flag after 17:00 has passed
-    if currentHour ~= dailyResetHour then
-        dailyResetTriggered = false
+    return false
+end
+
+local function CheckDailyReset()
+    -- Don't trigger if already triggered today
+    if dailyResetTriggered then
+        return false
+    end
+    
+    local currentTime = os.date("*t")
+    local currentHour = currentTime.hour
+    
+    -- Check if it's past 17:00 UTC+1
+    if currentHour >= dailyResetHour then
+        return true
     end
     
     return false
@@ -332,7 +405,7 @@ local function ResetRotation()
     
     -- Reset flags
     allCharactersCompleted = false
-    dailyResetTriggered = true
+    -- Don't reset dailyResetTriggered here - it stays true until midnight
     
     -- Reset to first character
     idx = 1
@@ -733,7 +806,7 @@ local function switchToNextCharacter()
         EnableARMultiXA()
         allCharactersCompleted = true
         
-        EchoXA("[RelogAuto] Multi Mode enabled - waiting for daily reset at 17:00 UTC+1")
+        EchoXA("[RelogAuto] Multi Mode enabled - waiting for daily reset at " .. dailyResetHour .. ":00 UTC+1")
         return false
     end
     
@@ -744,7 +817,7 @@ local function switchToNextCharacter()
         EnableARMultiXA()
         allCharactersCompleted = true
         
-        EchoXA("[RelogAuto] Multi Mode enabled - waiting for daily reset at 17:00 UTC+1")
+        EchoXA("[RelogAuto] Multi Mode enabled - waiting for daily reset at " .. dailyResetHour .. ":00 UTC+1")
         return false
     end
     
@@ -885,6 +958,7 @@ local currentIdx = idx
 
 EchoXA("[RelogAuto] === STARTING AD RELOG AUTOMATION WITH DC TRAVEL & MULTI-HELPER VERIFICATION ===")
 EchoXA("[RelogAuto] Party Verification: " .. (enablePartyVerification and "ENABLED" or "DISABLED"))
+EchoXA("[RelogAuto] Daily Reset Time: " .. dailyResetHour .. ":00 UTC+1")
 EchoXA("[RelogAuto] Starting character rotation...")
 reportRotationStatus()
 
@@ -948,40 +1022,52 @@ EchoXA("[RelogAuto] === ENTERING MAIN LOOP ===")
 while rotationStarted do
     local inDuty = false
     
-    -- === DAILY RESET CHECK ===
-    local currentTime = os.time()
-    if currentTime - lastDailyResetCheck >= dailyResetCheckInterval then
-        lastDailyResetCheck = currentTime
-        
-        if CheckDailyReset() then
-            EchoXA("[DailyReset] === DAILY RESET TRIGGERED ===")
-            
-            if allCharactersCompleted then
-                DisableARMultiXA()
-                SleepXA(2)
-            end
-            
-            if ResetRotation() then
-                allCharactersCompleted = false
-                
-                local initSuccess = InitializeCharacter()
-                
-                while not initSuccess and rotationStarted do
-                    EchoXA("[RelogAuto] Character skipped after reset - trying next character...")
-                    if not switchToNextCharacter() then
-                        EchoXA("[RelogAuto] All characters already completed after reset.")
-                        allCharactersCompleted = true
-                        break
-                    end
-                    initSuccess = InitializeCharacter()
-                end
-            else
-                EchoXA("[DailyReset] ERROR: Failed to reset rotation")
-            end
-        end
+    -- === DEATH CHECK ===
+    if IsPlayerDead() then
+        EchoXA("[Death] === DEATH DETECTED ===")
+        HandleDeath()
     end
     
+    -- === MIDNIGHT CHECK (Reset the dailyResetTriggered flag) ===
+    local currentTime = os.time()
+    if currentTime - lastMidnightCheck >= midnightCheckInterval then
+        lastMidnightCheck = currentTime
+        CheckMidnight()
+    end
+    
+    -- === DAILY RESET CHECK (when all characters are done and waiting) ===
     if allCharactersCompleted then
+        if currentTime - lastDailyResetCheck >= dailyResetCheckInterval then
+            lastDailyResetCheck = currentTime
+            
+            if CheckDailyReset() and not dailyResetTriggered then
+                EchoXA("[DailyReset] === DAILY RESET TRIGGERED (All Characters Idle) ===")
+                dailyResetTriggered = true
+                
+                DisableARMultiXA()
+                SleepXA(2)
+                
+                if ResetRotation() then
+                    allCharactersCompleted = false
+                    
+                    local initSuccess = InitializeCharacter()
+                    
+                    while not initSuccess and rotationStarted do
+                        EchoXA("[RelogAuto] Character skipped after reset - trying next character...")
+                        if not switchToNextCharacter() then
+                            EchoXA("[RelogAuto] All characters already completed after reset.")
+                            allCharactersCompleted = true
+                            break
+                        end
+                        initSuccess = InitializeCharacter()
+                    end
+                else
+                    EchoXA("[DailyReset] ERROR: Failed to reset rotation")
+                end
+            end
+        end
+        
+        -- If all characters completed, just sleep and continue checking for reset
         SleepXA(5)
         goto continue_loop
     end
@@ -1027,6 +1113,43 @@ while rotationStarted do
         EchoXA("[RelogAuto] Returning to homeworld...")
         ReturnToHomeworld()
         SleepXA(2)
+        
+        -- === CHECK FOR DAILY RESET AFTER DUTY ===
+        if CheckDailyReset() and not dailyResetTriggered then
+            EchoXA("[DailyReset] === DAILY RESET DETECTED AFTER DUTY COMPLETION ===")
+            dailyResetTriggered = true
+            
+            EchoXA("[DailyReset] Current character completed duty after reset time")
+            EchoXA("[DailyReset] Marking current character as completed for today...")
+            local actualCharName = charConfigs[idx][1][1]
+            completedCharacters[actualCharName] = true
+            
+            EchoXA("[DailyReset] Resetting rotation to first character...")
+            if allCharactersCompleted then
+                DisableARMultiXA()
+                SleepXA(2)
+            end
+            
+            if ResetRotation() then
+                allCharactersCompleted = false
+                
+                local initSuccess = InitializeCharacter()
+                
+                while not initSuccess and rotationStarted do
+                    EchoXA("[RelogAuto] Character skipped after reset - trying next character...")
+                    if not switchToNextCharacter() then
+                        EchoXA("[RelogAuto] All characters already completed after reset.")
+                        allCharactersCompleted = true
+                        break
+                    end
+                    initSuccess = InitializeCharacter()
+                end
+                
+                goto continue_loop
+            else
+                EchoXA("[DailyReset] ERROR: Failed to reset rotation")
+            end
+        end
         
         -- === DUTY COMPLETION VERIFICATION ===
         EchoXA("[RelogAuto] === VERIFYING DUTY COMPLETION ===")
@@ -1197,5 +1320,4 @@ while rotationStarted do
 end
 
 EchoXA("[RelogAuto] === AD RELOG AUTOMATION ENDED ===")
-
 EchoXA("[RelogAuto] All characters processed or script manually stopped")
