@@ -5,7 +5,8 @@
 Two complementary scripts for automating daily duty roulette runs across multiple characters and helpers in Final Fantasy XIV. These scripts work together to manage character rotations, party coordination, and submarine management efficiently.
 
 **ONLY USE THIS SCRIPT IF YOU CAN HANDLE RUNNING 4 INSTANCES OF FFXIV AT THE SAME TIME.**
-**THIS SCRIPT ONLY SUPPORTS 2 CHARACTERS IN A PARTY OF 4 with 2 Non-Mentioned Static Helpers**
+
+**THIS SCRIPT ONLY WORKS IN A PARTY OF FOUR. IF YOU GO OUT OF YOUR WAY TO EDIT IT IN ANY SHAPE OR FORM THAT CAUSES YOU TO GET BANNED IT'S YOUR FAULT**
 ---
 
 ## Main Character Script (AD Relog Automation)
