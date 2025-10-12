@@ -24,10 +24,11 @@
 -- Advanced multi-character AD roulette automation script with intelligent party management and DC travel.
 -- Automatically handles character rotation, DC travel, duty roulette queuing, and multi-helper verification.
 --
--- Version: 1.3.0
+-- Version: 1.3.1 (FIXED)
 -- Last Updated: 2025-10-12
--- Added: Improved daily reset handling with midnight flag reset
--- Added: Death handler with automatic revival and AutoDuty restart
+-- Fixed: Missing return values in getNextAvailableCharacter
+-- Fixed: Removed orphaned code block in VerifyCharacterSwitch
+-- Fixed: AttemptSubmarineRelogin now properly attempts relogin
 
 ----------------------------------------------------------------------------------------------------------------------------
 ---- PLUGIN REQUIREMENTS ----
@@ -448,8 +449,40 @@ local function CheckSubmarines()
     return false
 end
 
+-- FIXED: Now properly attempts to relog to original character
 local function AttemptSubmarineRelogin()
-    return false
+    if not originalCharForSubmarines or originalCharForSubmarines == "" then
+        EchoXA("[Subs] ERROR: No original character stored for submarine relogin")
+        return false
+    end
+    
+    EchoXA("[Subs] === ATTEMPTING SUBMARINE RELOGIN ===")
+    EchoXA("[Subs] Attempting to return to: " .. originalCharForSubmarines)
+    
+    submarineReloginAttempts = submarineReloginAttempts + 1
+    
+    if submarineReloginAttempts > maxSubmarineReloginAttempts then
+        EchoXA("[Subs] ERROR: Maximum relogin attempts reached (" .. maxSubmarineReloginAttempts .. ")")
+        EchoXA("[Subs] Marking submarine relogin as failed and continuing rotation")
+        submarineReloginInProgress = false
+        submarineReloginAttempts = 0
+        originalCharForSubmarines = nil
+        return false
+    end
+    
+    EchoXA("[Subs] Relogin attempt " .. submarineReloginAttempts .. "/" .. maxSubmarineReloginAttempts)
+    
+    local success = ARRelogXA(originalCharForSubmarines)
+    
+    if success then
+        EchoXA("[Subs] Relogin command sent successfully")
+        CharacterSafeWaitXA()
+        return true
+    else
+        EchoXA("[Subs] Relogin command failed, will retry...")
+        SleepXA(5)
+        return false
+    end
 end
 
 local function CheckSubmarineReloginComplete()
@@ -494,10 +527,17 @@ local function CheckSubmarineReloginComplete()
         return true
     else
         EchoXA("[Subs] WARNING: Character mismatch after submarines. Expected: " .. expectedName .. ", Actual: " .. actualName)
-        EchoXA("[Subs] Marking submarine relogin as complete anyway to continue rotation")
-        submarineReloginInProgress = false
-        originalCharForSubmarines = nil
-        return true
+        
+        -- Attempt relogin again
+        if AttemptSubmarineRelogin() then
+            EchoXA("[Subs] Relogin reattempted, will verify again next cycle")
+            return false
+        else
+            EchoXA("[Subs] Relogin failed, marking as complete to continue rotation")
+            submarineReloginInProgress = false
+            originalCharForSubmarines = nil
+            return true
+        end
     end
 end
 
@@ -617,10 +657,6 @@ local function VerifyCharacterSwitch(expectedName)
     return false
 end
 
-    EchoXA("[RelogAuto] FATAL: Character switch failed after " .. maxRetries .. " attempts!")
-    return false
-end
-
 local function getCharIndex(name)
     if not name or name == "" then
         return nil
@@ -635,6 +671,7 @@ local function getCharIndex(name)
     return nil
 end
 
+-- FIXED: Now properly returns nil values when no characters available
 local function getNextAvailableCharacter(currentIdx)
     local attempts = 0
     local nextIdx = currentIdx or 0
@@ -661,6 +698,11 @@ local function getNextAvailableCharacter(currentIdx)
         
         attempts = attempts + 1
     end
+    
+    -- FIXED: Properly return nil when no characters available
+    EchoXA("[RelogAuto] DEBUG: No available characters found")
+    return nil, nil
+end
 
 local function attemptCharacterLogin(targetIdx)
     local targetChar = charConfigs[targetIdx][1][1]
@@ -1218,4 +1260,3 @@ end
 EchoXA("[RelogAuto] === AD RELOG AUTOMATION ENDED ===")
 
 EchoXA("[RelogAuto] All characters processed or script manually stopped")
-
