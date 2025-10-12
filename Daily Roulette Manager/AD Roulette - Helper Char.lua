@@ -384,6 +384,27 @@ local function ResetRotation()
     end
 end
 
+local function InitializeDailyResetState()
+    local currentTime = os.date("*t")
+    local currentHour = currentTime.hour
+    
+    -- Wenn Script nach Reset-Zeit gestartet wird, markiere Reset als "bereits erfolgt"
+    if currentHour >= dailyResetHour then
+        dailyResetTriggered = true
+        EchoXA("[DailyReset] === INITIALIZATION ===")
+        EchoXA("[DailyReset] Script started after " .. dailyResetHour .. ":00 - Reset already occurred today")
+        EchoXA("[DailyReset] Daily reset will be available tomorrow at " .. dailyResetHour .. ":00")
+        EchoXA("[DailyReset] Current rotation will complete normally")
+    else
+        dailyResetTriggered = false
+        local hoursUntilReset = dailyResetHour - currentHour
+        EchoXA("[DailyReset] === INITIALIZATION ===")
+        EchoXA("[DailyReset] Script started before " .. dailyResetHour .. ":00")
+        EchoXA("[DailyReset] Daily reset will trigger in ~" .. hoursUntilReset .. " hours")
+        EchoXA("[DailyReset] After reset, rotation will restart from first character")
+    end
+end
+
 -- ===============================================
 -- Submarine Monitoring Functions
 -- ===============================================
@@ -660,7 +681,7 @@ local function getNextAvailableHelper(currentIdx)
         
         attempts = attempts + 1
     end
-
+    
     EchoXA("[Helper] DEBUG: No available helpers found in remaining list")
     return nil, nil
 end
@@ -940,6 +961,7 @@ local loginSuccess = false
 local currentIdx = idx
 
 EchoXA("[Helper] === STARTING HELPER AUTOMATION WITH ROTATION ===")
+InitializeDailyResetState()
 EchoXA("[Helper] Daily Reset Time: " .. dailyResetHour .. ":00 UTC+1")
 EchoXA("[Helper] Starting helper rotation...")
 reportRotationStatus()
@@ -1401,5 +1423,3 @@ end
 
 EchoXA("[Helper] === HELPER AUTOMATION ENDED ===")
 EchoXA("[Helper] All runs completed or script manually stopped")
-
-
