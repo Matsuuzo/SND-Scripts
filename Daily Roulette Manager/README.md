@@ -167,7 +167,7 @@ This is an ongoing project with planned additions:
 - **Inviting Character **: v1.2.1
 - **Roulette Helper **: v1.0.19
 - **Static Helper Char**: v1.0
-- **Inviting Character - 4 Character Version** v1.2.2
+- **Inviting Character - 4 Character Version** v1.3.0
 - **Last Updated**: 2025-10-12
 
 ---
