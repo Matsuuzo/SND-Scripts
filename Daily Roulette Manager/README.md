@@ -165,8 +165,9 @@ This is an ongoing project with planned additions:
 
 ## Version Information
 
-- **Main Character Script**: v1.2.1
-- **Helper Character Script**: v1.0.18
+- **Main Character **: v1.2.1
+- **Helper Character **: v1.0.19
+- **Static Helper Char**: v1.0
 - **Last Updated**: 2025-10-12
 
 ---
