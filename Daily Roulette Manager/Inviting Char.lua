@@ -9,6 +9,7 @@
 ----------------------------------------------------------------------------------------------------------------------------
 -- REQUIRED PLUGINS:
 -- • TextAdvance - For automatic text interaction
+-- • Autoduty - For Automatic Duty handling
 -- • AutoRetainer - For character switching and relog functionality
 -- • Lifestream - For world travel and DC travel systems
 -- • BossMod (Veyn) - For combat mechanics handling
@@ -1105,4 +1106,5 @@ while rotationStarted do
 end
 
 EchoXA("[RelogAuto] === AD RELOG AUTOMATION ENDED ===")
+
 EchoXA("[RelogAuto] All characters processed or script manually stopped")
