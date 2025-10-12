@@ -1,4 +1,4 @@
-# FFXIV Duty Automation Scripts
+# FFXIV Leveling Roulette Automation
 
 ## Overview
 
