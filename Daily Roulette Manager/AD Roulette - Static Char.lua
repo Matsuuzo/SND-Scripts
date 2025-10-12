@@ -1,5 +1,4 @@
 ----------------------------------------------------------------------------------------------------------------------------
--- 
 -- ██████╗ ██████╗ ███████╗ █████╗ ███╗   ███╗
 -- ██╔══██╗██╔══██╗██╔════╝██╔══██╗████╗ ████║
 -- ██║  ██║██████╔╝█████╗  ███████║██╔████╔██║
@@ -25,7 +24,7 @@
 -- Automatically handles AutoDuty start/stop and movement control when entering/leaving duties.
 -- Designed to run continuously on helper characters without relog or submarine handling.
 --
--- Matsuuzo AD Automation (Static Helper) v1.0.0
+-- Dream AD Automation (Static Helper) v1.0.0
 -- Last Updated: 2025-10-12
 -- Simple duty automation for static helper characters
 --
@@ -77,13 +76,73 @@ local wasInDuty = false
 local adRunActive = false
 
 -- ===============================================
+-- Death Handler Functions
+-- ===============================================
+
+local function IsPlayerDead()
+    if Svc and Svc.Condition then
+        if type(Svc.Condition.IsDeath) == "function" then
+            local ok, res = pcall(Svc.Condition.IsDeath, Svc.Condition)
+            if ok then return res end
+        end
+        -- fallback: condition index 2
+        return Svc.Condition[2] == true
+    end
+    return false
+end
+
+local function HandleDeath()
+    EchoXA("[STATIC] Player death detected - initiating revival...")
+    
+    -- Wait for SelectYesno dialog to appear
+    SleepXA(1.5)
+    
+    -- Click Yes on revival prompt
+    SelectYesnoXA()
+    
+    -- Wait for player to be alive again
+    local attempts = 0
+    local maxAttempts = 30  -- 30 seconds timeout
+    
+    while IsPlayerDead() and attempts < maxAttempts do
+        SleepXA(1)
+        attempts = attempts + 1
+    end
+    
+    if attempts >= maxAttempts then
+        EchoXA("[STATIC] WARNING: Revival timeout - player may still be dead")
+        return false
+    end
+    
+    EchoXA("[STATIC] Player revived successfully")
+    
+    -- Wait for character to stabilize
+    SleepXA(2)
+    
+    -- Restart AutoDuty if we were in a duty
+    if adRunActive then
+        EchoXA("[STATIC] Restarting AutoDuty after death...")
+        adXA("start")
+        SleepXA(1)
+    end
+    
+    return true
+end
+
+-- ===============================================
 -- Main Loop
 -- ===============================================
 
-EchoXA("[STATIC] === MATSUUZO AD AUTOMATION (STATIC HELPER) STARTED ===")
+EchoXA("[STATIC] === DREAM AD AUTOMATION (STATIC HELPER) STARTED ===")
 EchoXA("[STATIC] Waiting for duty invites...")
 
 while true do
+    -- Check for death
+    if IsPlayerDead() then
+        EchoXA("[STATIC] === DEATH DETECTED ===")
+        HandleDeath()
+    end
+    
     -- Check duty status
     local inDuty = false
     if Player ~= nil and Player.IsInDuty ~= nil then
@@ -124,4 +183,4 @@ while true do
     SleepXA(1)
 end
 
-EchoXA("[STATIC] === MATSUUZO AD AUTOMATION (STATIC HELPER) ENDED ===")
+EchoXA("[STATIC] === DREAM AD AUTOMATION (STATIC HELPER) ENDED ===")
