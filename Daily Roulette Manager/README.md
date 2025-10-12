@@ -121,6 +121,7 @@ Automates helper characters that support main character runs by managing helper 
 ### Required Plugins
 - **TextAdvance** - Automatic dialog interaction
 - **AutoRetainer** - Character switching and relog functionality
+- **AutoDuty** - Automatic Duty handling
 - **Lifestream** - World travel and DC travel
 - **BossMod (Veyn)** - Combat mechanics handling
 - **vnav** - Navigation and pathfinding
