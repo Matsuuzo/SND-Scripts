@@ -153,9 +153,7 @@ Both scripts require character/helper configuration at the top of the file:
 ## Future Enhancements
 
 This is an ongoing project with planned additions:
-- Handling for a Party of 4
-- Additional duty types beyond Leveling roulette
-- Custom duty selection logic
+- Multiple duty selection logic per Character
 - Enhanced error recovery mechanisms
 - Performance optimization for large character rosters
 - Advanced party composition validation
@@ -166,9 +164,10 @@ This is an ongoing project with planned additions:
 
 ## Version Information
 
-- **Main Character **: v1.2.1
-- **Helper Character **: v1.0.19
+- **Inviting Character **: v1.2.1
+- **Roulette Helper **: v1.0.19
 - **Static Helper Char**: v1.0
+- **Inviting Character - 4 Character Version** v1.2.2
 - **Last Updated**: 2025-10-12
 
 ---
