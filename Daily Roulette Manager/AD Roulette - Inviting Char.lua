@@ -331,8 +331,11 @@ local function CheckDailyReset()
     local currentTime = os.date("*t")
     local currentHour = currentTime.hour
     
-    -- Check if it's past 17:00 UTC+1
+    -- Check if it's past reset hour UTC+1
     if currentHour >= dailyResetHour then
+        EchoXA("[DailyReset] === DAILY RESET CONDITIONS MET ===")
+        EchoXA("[DailyReset] Current hour: " .. currentHour .. ":XX")
+        EchoXA("[DailyReset] Reset hour: " .. dailyResetHour .. ":00")
         return true
     end
     
@@ -372,6 +375,27 @@ local function ResetRotation()
     else
         EchoXA("[DailyReset] ERROR: Failed to relog to first character")
         return false
+    end
+end
+
+local function InitializeDailyResetState()
+    local currentTime = os.date("*t")
+    local currentHour = currentTime.hour
+    
+    -- Wenn Script nach Reset-Zeit gestartet wird, markiere Reset als "bereits erfolgt"
+    if currentHour >= dailyResetHour then
+        dailyResetTriggered = true
+        EchoXA("[DailyReset] === INITIALIZATION ===")
+        EchoXA("[DailyReset] Script started after " .. dailyResetHour .. ":00 - Reset already occurred today")
+        EchoXA("[DailyReset] Daily reset will be available tomorrow at " .. dailyResetHour .. ":00")
+        EchoXA("[DailyReset] Current rotation will complete normally")
+    else
+        dailyResetTriggered = false
+        local hoursUntilReset = dailyResetHour - currentHour
+        EchoXA("[DailyReset] === INITIALIZATION ===")
+        EchoXA("[DailyReset] Script started before " .. dailyResetHour .. ":00")
+        EchoXA("[DailyReset] Daily reset will trigger in ~" .. hoursUntilReset .. " hours")
+        EchoXA("[DailyReset] After reset, rotation will restart from first character")
     end
 end
 
@@ -900,6 +924,7 @@ local currentIdx = idx
 
 EchoXA("[RelogAuto] === STARTING AD RELOG AUTOMATION WITH DC TRAVEL ===")
 EchoXA("[RelogAuto] Party Verification: " .. (enablePartyVerification and "ENABLED" or "DISABLED"))
+InitializeDailyResetState()
 EchoXA("[RelogAuto] Daily Reset Time: " .. dailyResetHour .. ":00 UTC+1")
 EchoXA("[RelogAuto] Starting character rotation...")
 reportRotationStatus()
