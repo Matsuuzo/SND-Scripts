@@ -318,14 +318,33 @@ local function CheckMidnight()
     local currentTime = os.date("*t")
     local currentHour = currentTime.hour
     
-    -- Reset the dailyResetTriggered flag after midnight (when hour < dailyResetHour)
     if currentHour < dailyResetHour and dailyResetTriggered then
-        EchoXA("[DailyReset] === MIDNIGHT PASSED - RESET FLAG CLEARED ===")
-        EchoXA("[DailyReset] Daily reset will be available again at " .. dailyResetHour .. ":00")
+        EchoXA("[DailyReset] === MIDNIGHT RESET ===")
         dailyResetTriggered = false
+        
+        -- WICHTIG: Multi Mode deaktivieren falls aktiv
+        if allHelpersCompleted then
+            EchoXA("[DailyReset] Deactivating Multi Mode...")
+            DisableARMultiXA()
+            SleepXA(2)
+            
+            -- Rotation neu starten
+            if ResetRotation() then
+                allHelpersCompleted = false
+                local initSuccess = InitializeHelper()
+                
+                while not initSuccess and rotationStarted do
+                    if not switchToNextHelper() then
+                        allHelpersCompleted = true
+                        break
+                    end
+                    initSuccess = InitializeHelper()
+                end
+            end
+        end
+        
         return true
     end
-    
     return false
 end
 
@@ -1100,260 +1119,103 @@ while rotationStarted do
         lastMovementCheck = os.time()
         
     elseif not inDuty and wasInDuty then
-        EchoXA("[Helper] === LEFT DUTY ===")
-        adRunActive = false
-        SleepXA(1)
-        adXA("stop")
-        EchoXA("[Helper] Left duty - AutoDuty reset")
-        
-        EchoXA("[Helper] Disabling BTB...")
-        yield("/xldisableprofile BTB")
-        SleepXA(2)
-        
-        EchoXA("[Helper] Disbanding party...")
-        BTBDisbandXA()
-        SleepXA(5)
-        
-        EchoXA("[Helper] Returning to homeworld...")
-        ReturnToHomeworld()
-        SleepXA(2)
-        
-        -- === CHECK FOR DAILY RESET AFTER DUTY ===
-        if CheckDailyReset() and not dailyResetTriggered then
-            EchoXA("[DailyReset] === DAILY RESET DETECTED AFTER DUTY COMPLETION ===")
-            dailyResetTriggered = true
-            
-            EchoXA("[DailyReset] Current helper completed duty after reset time")
-            EchoXA("[DailyReset] Marking current helper as completed for today...")
-            local actualHelperName = helperConfigs[idx][1][1]
-            completedHelpers[actualHelperName] = true
-            
-            EchoXA("[DailyReset] Resetting rotation to first helper...")
-            if allHelpersCompleted then
-                DisableARMultiXA()
-                SleepXA(2)
-            end
-            
-            if ResetRotation() then
-                allHelpersCompleted = false
-                
-                local initSuccess = InitializeHelper()
-                
-                while not initSuccess and rotationStarted do
-                    EchoXA("[Helper] Helper skipped after reset - trying next helper...")
-                    if not switchToNextHelper() then
-                        EchoXA("[Helper] All helpers already completed after reset.")
-                        allHelpersCompleted = true
-                        break
-                    end
-                    initSuccess = InitializeHelper()
-                end
-                
-                goto continue_loop
-            else
-                EchoXA("[DailyReset] ERROR: Failed to reset rotation")
-            end
-        end
-        
-        -- === DUTY COMPLETION VERIFICATION ===
-        EchoXA("[Helper] === VERIFYING DUTY COMPLETION ===")
-        local checkSuccess, rewardStatus = CheckDutyRouletteReward()
-        
-        if not checkSuccess then
-            EchoXA("[Helper] ERROR: Failed to verify duty completion")
-            -- Continue anyway to avoid getting stuck
-        elseif rewardStatus == "available" then
-            EchoXA("[Helper] WARNING: DUTY INCOMPLETE - REWARD NOT RECEIVED!")
-            EchoXA("[Helper] Character got stuck or duty failed - retrying...")
-            
-            -- Don't mark as completed, retry the duty
-            EchoXA("[Helper] Performing DC Travel again...")
-            PerformDCTravel()
-            CharacterSafeWaitXA()
-            
-            EchoXA("[Helper] Enabling BTB...")
-            yield("/xlenableprofile BTB")
-            SleepXA(2)
-            CharacterSafeWaitXA()
-            
-            EchoXA("[Helper] Waiting for party invite again...")
-            waitingForInvite = true
-            local invited, status, foundMain, foundIdx, foundHelper = WaitForPartyInvite(partyCheckTimeout)
-            waitingForInvite = false
-            
-            if not invited or status == "unknown" then
-                EchoXA("[Helper] ERROR: Party verification failed on retry!")
-                EchoXA("[Helper] Marking helper as SKIPPED (timeout/unknown party)...")
-                local actualHelperName = helperConfigs[idx][1][1]
-                skippedHelpers[actualHelperName] = true
-                
-                yield("/xldisableprofile BTB")
-                SleepXA(2)
-                if IsInParty() then
-                    yield("/leave")
-                    SleepXA(2)
-                end
-                ReturnToHomeworld()
-                
-                EchoXA("[Helper] Switching to next helper...")
-                if not switchToNextHelper() then
-                    EchoXA("[Helper] No more helpers available.")
-                    break
-                end
-                
-                local initSuccess = InitializeHelper()
-                while not initSuccess and rotationStarted do
-                    EchoXA("[Helper] Initialization failed - trying next helper...")
-                    if not switchToNextHelper() then
-                        EchoXA("[Helper] No more helpers available.")
-                        rotationStarted = false
-                        break
-                    end
-                    initSuccess = InitializeHelper()
-                end
-                goto continue_loop
-            end
-            
-            -- Check if we need to switch helpers for retry
-            if foundIdx ~= idx then
-                EchoXA("[Helper] Party requires different helper: " .. foundHelper)
-                EchoXA("[Helper] Current helper cannot complete this duty")
-                
-                yield("/xldisableprofile BTB")
-                SleepXA(2)
-                yield("/leave")
-                SleepXA(2)
-                ReturnToHomeworld()
-                
-                if completedHelpers[foundHelper] or failedHelpers[foundHelper] then
-                    EchoXA("[Helper] Required helper unavailable - marking current as SKIPPED")
-                    local actualHelperName = helperConfigs[idx][1][1]
-                    skippedHelpers[actualHelperName] = true
-                    
-                    if not switchToNextHelper() then
-                        EchoXA("[Helper] No more helpers available.")
-                        break
-                    end
-                    
-                    local initSuccess = InitializeHelper()
-                    while not initSuccess and rotationStarted do
-                        EchoXA("[Helper] Initialization failed - trying next helper...")
-                        if not switchToNextHelper() then
-                            EchoXA("[Helper] No more helpers available.")
-                            rotationStarted = false
-                            break
-                        end
-                        initSuccess = InitializeHelper()
-                    end
-                    goto continue_loop
-                end
-                
-                -- Switch to correct helper
-                if ARRelogXA(foundHelper) then
-                    -- Clear skip flag if it was set
-                    if skippedHelpers[foundHelper] then
-                        EchoXA("[Helper] Clearing skip flag for: " .. foundHelper)
-                        skippedHelpers[foundHelper] = nil
-                    end
-                    
-                    idx = foundIdx
-                    currentHelper = tostring(foundHelper):lower()
-                    currentToon = foundMain
-                    
-                    EnableTextAdvanceXA()
-                    SleepXA(2)
-                    
-                    -- Initialize with correct helper
-                    local initSuccess = InitializeHelper()
-                    if not initSuccess then
-                        EchoXA("[Helper] Failed to initialize correct helper")
-                        if not switchToNextHelper() then
-                            EchoXA("[Helper] No more helpers available.")
-                            break
-                        end
-                        initSuccess = InitializeHelper()
-                        while not initSuccess and rotationStarted do
-                            if not switchToNextHelper() then
-                                rotationStarted = false
-                                break
-                            end
-                            initSuccess = InitializeHelper()
-                        end
-                    end
-                    goto continue_loop
-                else
-                    failedHelpers[foundHelper] = true
-                    local actualHelperName = helperConfigs[idx][1][1]
-                    failedHelpers[actualHelperName] = true
-                    
-                    if not switchToNextHelper() then
-                        break
-                    end
-                    
-                    local initSuccess = InitializeHelper()
-                    while not initSuccess and rotationStarted do
-                        if not switchToNextHelper() then
-                            rotationStarted = false
-                            break
-                        end
-                        initSuccess = InitializeHelper()
-                    end
-                    goto continue_loop
-                end
-            end
-            
-            EchoXA("[Helper] === DUTY RETRY INITIATED - WAITING FOR QUEUE ===")
-            goto continue_loop
-        else
-            EchoXA("[Helper] ✓ Duty completion verified - reward received")
-        end
+    EchoXA("[Helper] === LEFT DUTY ===")
+    adRunActive = false
+    SleepXA(1)
+    adXA("stop")
+    EchoXA("[Helper] Left duty - AutoDuty reset")
+    
+    EchoXA("[Helper] Disabling BTB...")
+    yield("/xldisableprofile BTB")
+    SleepXA(2)
+    
+    EchoXA("[Helper] Disbanding party...")
+    BTBDisbandXA()
+    SleepXA(5)
+    
+    EchoXA("[Helper] Returning to homeworld...")
+    ReturnToHomeworld()
+    SleepXA(2)
+    
+    if CheckDailyReset() and not dailyResetTriggered then
+        EchoXA("[DailyReset] === DAILY RESET DETECTED AFTER DUTY ===")
+        dailyResetTriggered = true
         
         local actualHelperName = helperConfigs[idx][1][1]
-        if not completedHelpers[actualHelperName] then
-            completedHelpers[actualHelperName] = true
-            EchoXA("[Helper] Helper run " .. actualHelperName .. " marked as completed")
+        completedHelpers[actualHelperName] = true
+        
+        if allHelpersCompleted then
+            DisableARMultiXA()
+            SleepXA(2)
         end
         
-        -- === SUBMARINE CHECK POINT ===
-        EchoXA("[Subs] === CHECKING SUBMARINE STATUS BEFORE HELPER SWITCH ===")
-        local subsReady = CheckSubmarines()
-        
-        if subsReady and not submarinesPaused then
-            EchoXA("[Subs] === SUBMARINES READY - ACTIVATING MULTI MODE ===")
-            EchoXA("[Subs] Helper rotation will resume after submarines complete")
-            
-            -- Store current helper for later verification
-            originalHelperForSubmarines = helperConfigs[idx][1][1]
-            EchoXA("[Subs] Stored original helper: " .. originalHelperForSubmarines)
-            
-            EnableARMultiXA()
-            EchoXA("[Subs] Multi mode enabled - submarines will now run")
-            submarinesPaused = true
-            
-            EchoXA("[Subs] Waiting for submarines to complete...")
-            
-        else
-            EchoXA("[Subs] No submarines ready - continuing with helper rotation")
-            
-            EchoXA("[Helper] Switching to next helper...")
-            if not switchToNextHelper() then
-                EchoXA("[Helper] Rotation complete - Multi Mode active until reset.")
-                break
-            end
-            
+        if ResetRotation() then
+            allHelpersCompleted = false
             local initSuccess = InitializeHelper()
             
             while not initSuccess and rotationStarted do
-                EchoXA("[Helper] Initialization failed - trying next helper...")
                 if not switchToNextHelper() then
-                    EchoXA("[Helper] Rotation complete - Multi Mode active until reset.")
-                    rotationStarted = false
+                    allHelpersCompleted = true
                     break
                 end
                 initSuccess = InitializeHelper()
             end
+            goto continue_loop
         end
     end
+    
+    -- Duty Completion Check 
+    EchoXA("[Helper] === VERIFYING DUTY COMPLETION ===")
+    local checkSuccess, rewardStatus = CheckDutyRouletteReward()
+    
+    if not checkSuccess then
+        EchoXA("[Helper] WARNING: Could not verify - marking as completed anyway")
+        local actualHelperName = helperConfigs[idx][1][1]
+        completedHelpers[actualHelperName] = true
+    elseif rewardStatus == "completed" then
+        EchoXA("[Helper] ✓ Duty completion verified")
+        local actualHelperName = helperConfigs[idx][1][1]
+        completedHelpers[actualHelperName] = true
+    elseif rewardStatus == "available" then
+        EchoXA("[Helper] WARNING: Reward not received - will retry once")
+        -- NUR 1x Retry, dann als completed markieren
+        PerformDCTravel()
+        yield("/xlenableprofile BTB")
+        SleepXA(2)
+        
+        waitingForInvite = true
+        local invited, status = WaitForPartyInvite(partyCheckTimeout)
+        waitingForInvite = false
+        
+        if not invited or status == "unknown" then
+            EchoXA("[Helper] Retry failed - marking as completed to prevent loop")
+            local actualHelperName = helperConfigs[idx][1][1]
+            completedHelpers[actualHelperName] = true
+        else
+            goto continue_loop  -- Retry duty
+        end
+    end
+    
+    -- SUBMARINES CHECK
+    local subsReady = CheckSubmarines()
+    if subsReady and not submarinesPaused then
+        originalHelperForSubmarines = helperConfigs[idx][1][1]
+        EnableARMultiXA()
+        submarinesPaused = true
+    else
+        if not switchToNextHelper() then
+            break
+        end
+        local initSuccess = InitializeHelper()
+        while not initSuccess and rotationStarted do
+            if not switchToNextHelper() then
+                rotationStarted = false
+                break
+            end
+            initSuccess = InitializeHelper()
+        end
+    end
+end
     
     wasInDuty = inDuty
     
@@ -1423,3 +1285,4 @@ end
 
 EchoXA("[Helper] === HELPER AUTOMATION ENDED ===")
 EchoXA("[Helper] All runs completed or script manually stopped")
+
