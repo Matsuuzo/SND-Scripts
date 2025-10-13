@@ -1120,7 +1120,7 @@ elseif not inDuty and wasInDuty then
     elseif rewardStatus == "available" then
         EchoXA("[RelogAuto] WARNING: Duty incomplete - ONE retry")
         EnableBTBandInviteXA()
-        if not WaitForCompleteParty(currentHelper1, partyCheckMaxRetries) then
+        if not WaitForCompleteParty(currentHelper, partyCheckMaxRetries) then
             local actualCharName = charConfigs[idx][1][1]
             completedCharacters[actualCharName] = true
         else
@@ -1219,4 +1219,5 @@ end
 EchoXA("[RelogAuto] === AD RELOG AUTOMATION ENDED ===")
 
 EchoXA("[RelogAuto] All characters processed or script manually stopped")
+
 
