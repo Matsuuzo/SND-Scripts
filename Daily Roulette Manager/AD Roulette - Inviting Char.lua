@@ -311,14 +311,28 @@ local function CheckMidnight()
     local currentTime = os.date("*t")
     local currentHour = currentTime.hour
     
-    -- Reset the dailyResetTriggered flag after midnight (when hour < dailyResetHour)
     if currentHour < dailyResetHour and dailyResetTriggered then
-        EchoXA("[DailyReset] === MIDNIGHT PASSED - RESET FLAG CLEARED ===")
-        EchoXA("[DailyReset] Daily reset will be available again at " .. dailyResetHour .. ":00")
+        EchoXA("[DailyReset] === MIDNIGHT RESET ===")
         dailyResetTriggered = false
+        
+        if allCharactersCompleted then
+            DisableARMultiXA()
+            SleepXA(2)
+            
+            if ResetRotation() then
+                allCharactersCompleted = false
+                local initSuccess = InitializeCharacter()
+                while not initSuccess and rotationStarted do
+                    if not switchToNextCharacter() then
+                        allCharactersCompleted = true
+                        break
+                    end
+                    initSuccess = InitializeCharacter()
+                end
+            end
+        end
         return true
     end
-    
     return false
 end
 
@@ -1062,159 +1076,79 @@ while rotationStarted do
         
         lastMovementCheck = os.time()
         
-    elseif not inDuty and wasInDuty then
-        EchoXA("[RelogAuto] === LEFT DUTY ===")
-        adRunActive = false
-        SleepXA(1)
-        adXA("stop")
-        EchoXA("[RelogAuto] Left duty - AutoDuty reset")
-        
-        EchoXA("[RelogAuto] Disbanding party...")
-        BTBDisbandXA()
-        SleepXA(5)
-        
-        EchoXA("[RelogAuto] Returning to homeworld...")
-        ReturnToHomeworld()
-        SleepXA(2)
-        
-        -- === CHECK FOR DAILY RESET AFTER DUTY ===
-        if CheckDailyReset() and not dailyResetTriggered then
-            EchoXA("[DailyReset] === DAILY RESET DETECTED AFTER DUTY COMPLETION ===")
-            dailyResetTriggered = true
-            
-            EchoXA("[DailyReset] Current character completed duty after reset time")
-            EchoXA("[DailyReset] Marking current character as completed for today...")
-            local actualCharName = charConfigs[idx][1][1]
-            completedCharacters[actualCharName] = true
-            
-            EchoXA("[DailyReset] Resetting rotation to first character...")
-            if allCharactersCompleted then
-                DisableARMultiXA()
-                SleepXA(2)
-            end
-            
-            if ResetRotation() then
-                allCharactersCompleted = false
-                
-                local initSuccess = InitializeCharacter()
-                
-                while not initSuccess and rotationStarted do
-                    EchoXA("[RelogAuto] Character skipped after reset - trying next character...")
-                    if not switchToNextCharacter() then
-                        EchoXA("[RelogAuto] All characters already completed after reset.")
-                        allCharactersCompleted = true
-                        break
-                    end
-                    initSuccess = InitializeCharacter()
-                end
-                
-                goto continue_loop
-            else
-                EchoXA("[DailyReset] ERROR: Failed to reset rotation")
-            end
-        end
-        
-        -- === DUTY COMPLETION VERIFICATION ===
-        EchoXA("[RelogAuto] === VERIFYING DUTY COMPLETION ===")
-        local checkSuccess, rewardStatus = CheckDutyRouletteReward()
-        
-        if not checkSuccess then
-            EchoXA("[RelogAuto] ERROR: Failed to verify duty completion")
-            -- Continue anyway to avoid getting stuck
-        elseif rewardStatus == "available" then
-            EchoXA("[RelogAuto] ⚠ WARNING: DUTY INCOMPLETE - REWARD NOT RECEIVED!")
-            EchoXA("[RelogAuto] Character got stuck or duty failed - retrying...")
-            
-            -- Don't mark as completed, retry the duty
-            EchoXA("[RelogAuto] Re-enabling BTB and sending party invite...")
-            EnableBTBandInviteXA()
-            CharacterSafeWaitXA()
-            
-            EchoXA("[RelogAuto] Verifying party composition...")
-            if not WaitForCompleteParty(currentHelper, partyCheckMaxRetries) then
-                EchoXA("[RelogAuto] ERROR: Party verification failed on retry!")
-                EchoXA("[RelogAuto] Marking character as failed...")
-                local actualCharName = charConfigs[idx][1][1]
-                failedCharacters[actualCharName] = true
-                
-                BTBDisbandXA()
-                SleepXA(2)
-                
-                EchoXA("[RelogAuto] Switching to next character...")
-                if not switchToNextCharacter() then
-                    EchoXA("[RelogAuto] No more characters available.")
-                    break
-                end
-                
-                local initSuccess = InitializeCharacter()
-                while not initSuccess and rotationStarted do
-                    EchoXA("[RelogAuto] Character skipped - trying next character...")
-                    if not switchToNextCharacter() then
-                        EchoXA("[RelogAuto] No more characters available.")
-                        rotationStarted = false
-                        break
-                    end
-                    initSuccess = InitializeCharacter()
-                end
-                goto continue_loop
-            end
-            
-            EchoXA("[RelogAuto] Party verified - re-queueing for duty...")
-            QueueDutyRoulette()
-            SleepXA(2)
-            
-            EchoXA("[RelogAuto] === DUTY RETRY INITIATED ===")
-            goto continue_loop
-        else
-            EchoXA("[RelogAuto] ✓ Duty completion verified - reward received")
-        end
-        
+elseif not inDuty and wasInDuty then
+    EchoXA("[RelogAuto] === LEFT DUTY ===")
+    adRunActive = false
+    adXA("stop")
+    
+    BTBDisbandXA()
+    SleepXA(5)
+    ReturnToHomeworld()
+    SleepXA(2)
+    
+    -- Daily Reset Check FIRST
+    if CheckDailyReset() and not dailyResetTriggered then
+        dailyResetTriggered = true
         local actualCharName = charConfigs[idx][1][1]
-        if not completedCharacters[actualCharName] then
-            completedCharacters[actualCharName] = true
-            EchoXA("[RelogAuto] Character " .. actualCharName .. " marked as completed")
+        completedCharacters[actualCharName] = true
+        
+        if allCharactersCompleted then
+            DisableARMultiXA()
+            SleepXA(2)
         end
         
-        -- === SUBMARINE CHECK POINT ===
-        EchoXA("[Subs] === CHECKING SUBMARINE STATUS BEFORE CHARACTER SWITCH ===")
-        local subsReady = CheckSubmarines()
-        
-        if subsReady and not submarinesPaused then
-            EchoXA("[Subs] === SUBMARINES READY - ACTIVATING MULTI MODE ===")
-            EchoXA("[Subs] Character rotation will resume after submarines complete")
-            
-            -- Store current character for later verification
-            originalCharForSubmarines = charConfigs[idx][1][1]
-            EchoXA("[Subs] Stored original character: " .. originalCharForSubmarines)
-            
-            EnableARMultiXA()
-            EchoXA("[Subs] Multi mode enabled - submarines will now run")
-            submarinesPaused = true
-            
-            EchoXA("[Subs] Waiting for submarines to complete...")
-            
-        else
-            EchoXA("[Subs] No submarines ready - continuing with character rotation")
-            
-            EchoXA("[RelogAuto] Switching to next character...")
-            if not switchToNextCharacter() then
-                EchoXA("[RelogAuto] No more characters available. Stopping script.")
-                break
-            end
-            
+        if ResetRotation() then
+            allCharactersCompleted = false
             local initSuccess = InitializeCharacter()
-            
             while not initSuccess and rotationStarted do
-                EchoXA("[RelogAuto] Character skipped - trying next character...")
                 if not switchToNextCharacter() then
-                    EchoXA("[RelogAuto] No more characters available. Stopping script.")
-                    rotationStarted = false
+                    allCharactersCompleted = true
                     break
                 end
                 initSuccess = InitializeCharacter()
             end
+            goto continue_loop
         end
     end
+    
+    -- Duty Verification
+    local checkSuccess, rewardStatus = CheckDutyRouletteReward()
+    
+    if not checkSuccess or rewardStatus == "completed" then
+        local actualCharName = charConfigs[idx][1][1]
+        completedCharacters[actualCharName] = true
+    elseif rewardStatus == "available" then
+        EchoXA("[RelogAuto] WARNING: Duty incomplete - ONE retry")
+        EnableBTBandInviteXA()
+        if not WaitForCompleteParty(currentHelper1, partyCheckMaxRetries) then
+            local actualCharName = charConfigs[idx][1][1]
+            completedCharacters[actualCharName] = true
+        else
+            QueueDutyRoulette()
+            goto continue_loop
+        end
+    end
+    
+    -- Submarines
+    local subsReady = CheckSubmarines()
+    if subsReady and not submarinesPaused then
+        originalCharForSubmarines = charConfigs[idx][1][1]
+        EnableARMultiXA()
+        submarinesPaused = true
+    else
+        if not switchToNextCharacter() then
+            break
+        end
+        local initSuccess = InitializeCharacter()
+        while not initSuccess and rotationStarted do
+            if not switchToNextCharacter() then
+                rotationStarted = false
+                break
+            end
+            initSuccess = InitializeCharacter()
+        end
+    end
+end
     
     wasInDuty = inDuty
     
@@ -1285,3 +1219,4 @@ end
 EchoXA("[RelogAuto] === AD RELOG AUTOMATION ENDED ===")
 
 EchoXA("[RelogAuto] All characters processed or script manually stopped")
+
