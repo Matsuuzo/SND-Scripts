@@ -40,8 +40,7 @@
 
 -- Dalamud Profile called "BTB" only using BardToolBox
 
-require("dfunc")
-require("xafunc")
+require("curefunc")
 
 -- ===============================================
 -- Configuration
@@ -129,38 +128,38 @@ local function IsPlayerDead()
 end
 
 local function HandleDeath()
-    EchoXA("[Death] Player death detected - initiating revival...")
+    CureEcho("[Death] Player death detected - initiating revival...")
     
     -- Wait for SelectYesno dialog to appear
-    SleepXA(1.5)
+    CureSleep(1.5)
     
     -- Click Yes on revival prompt
-    SelectYesnoXA()
+    CureSelectYesno()
     
     -- Wait for player to be alive again
     local attempts = 0
     local maxAttempts = 30  -- 30 seconds timeout
     
     while IsPlayerDead() and attempts < maxAttempts do
-        SleepXA(1)
+        CureSleep(1)
         attempts = attempts + 1
     end
     
     if attempts >= maxAttempts then
-        EchoXA("[Death] WARNING: Revival timeout - player may still be dead")
+        CureEcho("[Death] WARNING: Revival timeout - player may still be dead")
         return false
     end
     
-    EchoXA("[Death] Player revived successfully")
+    CureEcho("[Death] Player revived successfully")
     
     -- Wait for character to stabilize
-    SleepXA(2)
+    CureSleep(2)
     
     -- Restart AutoDuty if we were in a duty
     if adRunActive then
-        EchoXA("[Death] Restarting AutoDuty after death...")
-        adXA("start")
-        SleepXA(1)
+        CureEcho("[Death] Restarting AutoDuty after death...")
+        CureAd("start")
+        CureSleep(1)
     end
     
     return true
@@ -174,7 +173,7 @@ local function GetPartyMemberNames()
     local members = {}
     
     if not Svc or not Svc.Party then
-        EchoXA("[Helper] ERROR: Svc.Party not available")
+        CureEcho("[Helper] ERROR: Svc.Party not available")
         return members
     end
     
@@ -195,7 +194,7 @@ end
 
 local function IsToonInParty(toonName)
     if not toonName or toonName == "" then
-        EchoXA("[Helper] No toon specified - skipping verification")
+        CureEcho("[Helper] No toon specified - skipping verification")
         return false
     end
     
@@ -224,13 +223,13 @@ local function ListPartyMembers()
     local partySize = #members
     
     if partySize == 0 then
-        EchoXA("[Helper] Solo (no party members)")
+        CureEcho("[Helper] Solo (no party members)")
         return
     end
     
-    EchoXA("[Helper] Party has " .. partySize .. " member(s):")
+    CureEcho("[Helper] Party has " .. partySize .. " member(s):")
     for i, name in ipairs(members) do
-        EchoXA("[Helper]   " .. i .. ". " .. name)
+        CureEcho("[Helper]   " .. i .. ". " .. name)
     end
 end
 
@@ -252,9 +251,9 @@ local function FindHelperForMainCharacter(mainCharName)
 end
 
 local function WaitForPartyInvite(timeout)
-    EchoXA("[Helper] === WAITING FOR PARTY INVITE ===")
-    EchoXA("[Helper] Will accept ANY party invite and determine correct helper")
-    EchoXA("[Helper] Timeout: " .. timeout .. " seconds")
+    CureEcho("[Helper] === WAITING FOR PARTY INVITE ===")
+    CureEcho("[Helper] Will accept ANY party invite and determine correct helper")
+    CureEcho("[Helper] Timeout: " .. timeout .. " seconds")
     
     local startTime = os.time()
     local lastCheck = 0
@@ -262,8 +261,8 @@ local function WaitForPartyInvite(timeout)
     while os.time() - startTime < timeout do
         -- Check if we're in a party
         if IsInParty() then
-            EchoXA("[Helper] ✓ Party invite received!")
-            SleepXA(2)
+            CureEcho("[Helper] ✓ Party invite received!")
+            CureSleep(2)
             
             -- Get all party members
             local members = GetPartyMemberNames()
@@ -285,12 +284,12 @@ local function WaitForPartyInvite(timeout)
             end
             
             if foundMainChar then
-                EchoXA("[Helper] ✓ Found main character in party: " .. foundMainChar)
-                EchoXA("[Helper] ✓ This party needs helper: " .. foundHelperName)
+                CureEcho("[Helper] ✓ Found main character in party: " .. foundMainChar)
+                CureEcho("[Helper] ✓ This party needs helper: " .. foundHelperName)
                 return true, "found", foundMainChar, foundHelperIdx, foundHelperName
             else
-                EchoXA("[Helper] ✗ No recognized main character in party!")
-                EchoXA("[Helper] Party members are not in the helper configuration")
+                CureEcho("[Helper] ✗ No recognized main character in party!")
+                CureEcho("[Helper] Party members are not in the helper configuration")
                 return true, "unknown", nil, nil, nil
             end
         end
@@ -299,14 +298,14 @@ local function WaitForPartyInvite(timeout)
         local elapsed = os.time() - startTime
         if elapsed - lastCheck >= 30 then
             local remaining = timeout - elapsed
-            EchoXA("[Helper] Still waiting for invite... (" .. remaining .. " seconds remaining)")
+            CureEcho("[Helper] Still waiting for invite... (" .. remaining .. " seconds remaining)")
             lastCheck = elapsed
         end
         
-        SleepXA(1)
+        CureSleep(1)
     end
     
-    EchoXA("[Helper] ✗ TIMEOUT: No party invite received after " .. timeout .. " seconds")
+    CureEcho("[Helper] ✗ TIMEOUT: No party invite received after " .. timeout .. " seconds")
     return false, "timeout", nil, nil, nil
 end
 
@@ -319,14 +318,14 @@ local function CheckMidnight()
     local currentHour = currentTime.hour
     
     if currentHour < dailyResetHour and dailyResetTriggered then
-        EchoXA("[DailyReset] === MIDNIGHT RESET ===")
+        CureEcho("[DailyReset] === MIDNIGHT RESET ===")
         dailyResetTriggered = false
         
         -- WICHTIG: Multi Mode deaktivieren falls aktiv
         if allHelpersCompleted then
-            EchoXA("[DailyReset] Deactivating Multi Mode...")
-            DisableARMultiXA()
-            SleepXA(2)
+            CureEcho("[DailyReset] Deactivating Multi Mode...")
+            CureDisableARMulti()
+            CureSleep(2)
             
             -- Rotation neu starten
             if ResetRotation() then
@@ -366,7 +365,7 @@ local function CheckDailyReset()
 end
 
 local function ResetRotation()
-    EchoXA("[DailyReset] === RESETTING HELPER ROTATION ===")
+    CureEcho("[DailyReset] === RESETTING HELPER ROTATION ===")
     
     -- Clear all completion and failure tracking
     failedHelpers = {}
@@ -384,21 +383,21 @@ local function ResetRotation()
         currentHelper = tostring(helperConfigs[1][1][1]):lower()
         currentToon = helperConfigs[1][2] and tostring(helperConfigs[1][2]) or ""
     else
-        EchoXA("[DailyReset] ERROR: First helper configuration is invalid")
+        CureEcho("[DailyReset] ERROR: First helper configuration is invalid")
         return false
     end
     
-    EchoXA("[DailyReset] Rotation reset complete - starting from first helper")
-    EchoXA("[DailyReset] First helper: " .. helperConfigs[1][1][1])
-    EchoXA("[DailyReset] Expected toon: " .. currentToon)
+    CureEcho("[DailyReset] Rotation reset complete - starting from first helper")
+    CureEcho("[DailyReset] First helper: " .. helperConfigs[1][1][1])
+    CureEcho("[DailyReset] Expected toon: " .. currentToon)
     
     -- Relog to first helper
-    if ARRelogXA(helperConfigs[1][1][1]) then
-        EnableTextAdvanceXA()
-        SleepXA(2)
+    if CureARRelog(helperConfigs[1][1][1]) then
+        CureEnableTextAdvance()
+        CureSleep(2)
         return true
     else
-        EchoXA("[DailyReset] ERROR: Failed to relog to first helper")
+        CureEcho("[DailyReset] ERROR: Failed to relog to first helper")
         return false
     end
 end
@@ -410,17 +409,17 @@ local function InitializeDailyResetState()
     -- Wenn Script nach Reset-Zeit gestartet wird, markiere Reset als "bereits erfolgt"
     if currentHour >= dailyResetHour then
         dailyResetTriggered = true
-        EchoXA("[DailyReset] === INITIALIZATION ===")
-        EchoXA("[DailyReset] Script started after " .. dailyResetHour .. ":00 - Reset already occurred today")
-        EchoXA("[DailyReset] Daily reset will be available tomorrow at " .. dailyResetHour .. ":00")
-        EchoXA("[DailyReset] Current rotation will complete normally")
+        CureEcho("[DailyReset] === INITIALIZATION ===")
+        CureEcho("[DailyReset] Script started after " .. dailyResetHour .. ":00 - Reset already occurred today")
+        CureEcho("[DailyReset] Daily reset will be available tomorrow at " .. dailyResetHour .. ":00")
+        CureEcho("[DailyReset] Current rotation will complete normally")
     else
         dailyResetTriggered = false
         local hoursUntilReset = dailyResetHour - currentHour
-        EchoXA("[DailyReset] === INITIALIZATION ===")
-        EchoXA("[DailyReset] Script started before " .. dailyResetHour .. ":00")
-        EchoXA("[DailyReset] Daily reset will trigger in ~" .. hoursUntilReset .. " hours")
-        EchoXA("[DailyReset] After reset, rotation will restart from first character")
+        CureEcho("[DailyReset] === INITIALIZATION ===")
+        CureEcho("[DailyReset] Script started before " .. dailyResetHour .. ":00")
+        CureEcho("[DailyReset] Daily reset will trigger in ~" .. hoursUntilReset .. " hours")
+        CureEcho("[DailyReset] After reset, rotation will restart from first character")
     end
 end
 
@@ -443,13 +442,13 @@ local function CheckSubmarines()
     
     local configPath = GetConfigPath()
     if not configPath then
-        EchoXA("[Subs] Could not resolve config path")
+        CureEcho("[Subs] Could not resolve config path")
         return false
     end
     
     local file, err = io.open(configPath, "r")
     if not file then
-        EchoXA("[Subs] Could not open config: " .. tostring(err))
+        CureEcho("[Subs] Could not open config: " .. tostring(err))
         return false
     end
     
@@ -457,7 +456,7 @@ local function CheckSubmarines()
     file:close()
     
     if not content or content == "" then
-        EchoXA("[Subs] Config file is empty")
+        CureEcho("[Subs] Config file is empty")
         return false
     end
     
@@ -485,14 +484,14 @@ local function CheckSubmarines()
     
     if available > 0 then
         local plural = available == 1 and "Sub" or "Subs"
-        EchoXA(string.format("[Subs] %d %s available - submarine mode activated!", available, plural))
+        CureEcho(string.format("[Subs] %d %s available - submarine mode activated!", available, plural))
         return true
     end
     
     if minDelta and minDelta > 0 then
         local minutes = math.max(0, math.ceil(minDelta / 60))
         local plural = minutes == 1 and "minute" or "minutes"
-        EchoXA(string.format("[Subs] Next submarine in %d %s", minutes, plural))
+        CureEcho(string.format("[Subs] Next submarine in %d %s", minutes, plural))
     end
     
     return false
@@ -505,7 +504,7 @@ local function CheckSubmarineReloginComplete()
     
     -- Check if we have a valid original helper stored
     if not originalHelperForSubmarines or originalHelperForSubmarines == "" then
-        EchoXA("[Subs] WARNING: No original helper stored, marking submarine relogin as complete")
+        CureEcho("[Subs] WARNING: No original helper stored, marking submarine relogin as complete")
         submarineReloginInProgress = false
         return true
     end
@@ -515,7 +514,7 @@ local function CheckSubmarineReloginComplete()
     local expectedName = originalHelperForSubmarines:match("^([^@]+)")
     
     if not expectedName then
-        EchoXA("[Subs] WARNING: Could not extract expected name, marking submarine relogin as complete")
+        CureEcho("[Subs] WARNING: Could not extract expected name, marking submarine relogin as complete")
         submarineReloginInProgress = false
         originalHelperForSubmarines = nil
         return true
@@ -525,22 +524,22 @@ local function CheckSubmarineReloginComplete()
     local expectedLower = tostring(expectedName):lower()
     
     if actualLower == expectedLower then
-        EchoXA("[Subs] Submarine relogin verification passed")
+        CureEcho("[Subs] Submarine relogin verification passed")
         submarineReloginInProgress = false
         submarineReloginAttempts = 0
         originalHelperForSubmarines = nil  -- Reset after successful verification
         
-        CharacterSafeWaitXA()
+        CureCharacterSafeWait()
         
         submarinesPaused = false
         
-        EchoXA("[Subs] === SAFETY VALIDATION COMPLETE ===")
-        EchoXA("[Subs] Resuming normal rotation on original helper")
+        CureEcho("[Subs] === SAFETY VALIDATION COMPLETE ===")
+        CureEcho("[Subs] Resuming normal rotation on original helper")
         
         return true
     else
-        EchoXA("[Subs] WARNING: Character mismatch after submarines. Expected: " .. expectedName .. ", Actual: " .. actualName)
-        EchoXA("[Subs] Marking submarine relogin as complete anyway to continue rotation")
+        CureEcho("[Subs] WARNING: Character mismatch after submarines. Expected: " .. expectedName .. ", Actual: " .. actualName)
+        CureEcho("[Subs] Marking submarine relogin as complete anyway to continue rotation")
         submarineReloginInProgress = false
         originalHelperForSubmarines = nil
         return true
@@ -552,13 +551,13 @@ end
 -- ===============================================
 
 local function CheckDutyRouletteReward()
-    EchoXA("[Helper] === CHECKING DUTY ROULETTE REWARD STATUS ===")
+    CureEcho("[Helper] === CHECKING DUTY ROULETTE REWARD STATUS ===")
     
     yield("/dutyfinder")
-    SleepXA(2)
+    CureSleep(2)
     
-    callbackXA("ContentsFinder true 2 2 0")
-    SleepXA(1)
+    yield("/callback ContentsFinder true 2 2 0")
+    CureSleep(1)
     
     local rewardReceived = nil
     local success, err = pcall(function()
@@ -572,22 +571,22 @@ local function CheckDutyRouletteReward()
     end)
     
     if not success then
-        EchoXA("[Helper] ERROR: Failed to read reward status - " .. tostring(err))
-        callbackXA("ContentsFinder true -1")
-        SleepXA(1)
+        CureEcho("[Helper] ERROR: Failed to read reward status - " .. tostring(err))
+        yield("/callback ContentsFinder true -1")
+        CureSleep(1)
         return false, "error"
     end
     
-    EchoXA("[Helper] Reward Text: [" .. tostring(rewardReceived) .. "]")
+    CureEcho("[Helper] Reward Text: [" .. tostring(rewardReceived) .. "]")
     
-    callbackXA("ContentsFinder true -1")
-    SleepXA(1)
+    yield("/callback ContentsFinder true -1")
+    CureSleep(1)
     
     if rewardReceived and rewardReceived ~= "" then
-        EchoXA("[Helper] === ROULETTE COMPLETED (TEXT FOUND) ===")
+        CureEcho("[Helper] === ROULETTE COMPLETED (TEXT FOUND) ===")
         return true, "completed"
     else
-        EchoXA("[Helper] === ROULETTE AVAILABLE (NO TEXT) ===")
+        CureEcho("[Helper] === ROULETTE AVAILABLE (NO TEXT) ===")
         return true, "available"
     end
 end
@@ -598,21 +597,23 @@ end
 
 local function PerformDCTravel()
     if dcTravelCompleted then
-        EchoXA("[Helper] DC Travel already completed for this character")
+        CureEcho("[Helper] DC Travel already completed for this character")
         return true
     end
     
-    EchoXA("[Helper] === INITIATING DATA CENTER TRAVEL ===")
-    EchoXA("[Helper] Target world: " .. dcTravelWorld)
+    CureEcho("[Helper] === INITIATING DATA CENTER TRAVEL ===")
+    CureEcho("[Helper] Target world: " .. dcTravelWorld)
     
-    LifestreamCmdXA(dcTravelWorld)
+    CureLifestreamCmd(dcTravelWorld)
+    CureWaitForLifestream()
+    CureCharacterSafeWait()
     
-    EchoXA("[Helper] === DATA CENTER TRAVEL COMPLETE ===")
-    EchoXA("[Helper] Now on world: " .. dcTravelWorld)
+    CureEcho("[Helper] === DATA CENTER TRAVEL COMPLETE ===")
+    CureEcho("[Helper] Now on world: " .. dcTravelWorld)
     
-    EchoXA("[Helper] Teleporting to Summerford...")
+    CureEcho("[Helper] Teleporting to Summerford...")
     yield("/li Summerford")
-    SleepXA(10)
+    CureSleep(10)
     
     dcTravelCompleted = true
     return true
@@ -620,15 +621,15 @@ end
 
 local function ReturnToHomeworld()
     if not dcTravelCompleted then
-        EchoXA("[Helper] No DC travel was performed - skipping homeworld return")
+        CureEcho("[Helper] No DC travel was performed - skipping homeworld return")
         return true
     end
     
-    EchoXA("[Helper] === RETURNING TO HOMEWORLD ===")
+    CureEcho("[Helper] === RETURNING TO HOMEWORLD ===")
     
-    return_to_homeworldXA()
+    CureReturnToHomeworld()
     
-    EchoXA("[Helper] === HOMEWORLD RETURN COMPLETE ===")
+    CureEcho("[Helper] === HOMEWORLD RETURN COMPLETE ===")
     dcTravelCompleted = false
     return true
 end
@@ -639,7 +640,7 @@ end
 
 local function VerifyCharacterSwitch(expectedName)
     if not expectedName or expectedName == "" then
-        EchoXA("[Helper] ERROR: No expected name provided for verification")
+        CureEcho("[Helper] ERROR: No expected name provided for verification")
         return false
     end
     
@@ -648,11 +649,11 @@ local function VerifyCharacterSwitch(expectedName)
     local actualLower = tostring(actualName):lower()
     
     if actualLower == expectedLower then
-        EchoXA("[Helper] Character switch verified: Now playing as " .. actualName)
+        CureEcho("[Helper] Character switch verified: Now playing as " .. actualName)
         return true
     end
     
-    EchoXA("[Helper] ERROR: Character switch failed! Expected: " .. expectedName .. ", Actual: " .. actualName)
+    CureEcho("[Helper] ERROR: Character switch failed! Expected: " .. expectedName .. ", Actual: " .. actualName)
     return false
 end
 
@@ -674,13 +675,13 @@ local function getNextAvailableHelper(currentIdx)
     local attempts = 0
     local nextIdx = currentIdx or 0
     
-    EchoXA("[Helper] DEBUG: Looking for next helper. Current idx: " .. (currentIdx or "nil"))
+    CureEcho("[Helper] DEBUG: Looking for next helper. Current idx: " .. (currentIdx or "nil"))
     
     while attempts < #helperConfigs do
         nextIdx = nextIdx + 1
         if nextIdx > #helperConfigs then
             -- Reached end of rotation
-            EchoXA("[Helper] DEBUG: Reached end of helper list")
+            CureEcho("[Helper] DEBUG: Reached end of helper list")
             return nil, nil
         end
         
@@ -689,31 +690,31 @@ local function getNextAvailableHelper(currentIdx)
         local isSkipped = skippedHelpers[helperName] or false
         local isCompleted = completedHelpers[helperName] or false
         
-        EchoXA("[Helper] DEBUG: Checking helper " .. nextIdx .. ": " .. helperName .. 
+        CureEcho("[Helper] DEBUG: Checking helper " .. nextIdx .. ": " .. helperName .. 
                " (Failed: " .. tostring(isFailed) .. ", Skipped: " .. tostring(isSkipped) .. ", Completed: " .. tostring(isCompleted) .. ")")
         
         -- Available if: not failed AND not completed (skipped is okay!)
         if not isFailed and not isCompleted then
-            EchoXA("[Helper] DEBUG: Found available helper: " .. helperName)
+            CureEcho("[Helper] DEBUG: Found available helper: " .. helperName)
             return nextIdx, helperName
         end
         
         attempts = attempts + 1
     end
     
-    EchoXA("[Helper] DEBUG: No available helpers found in remaining list")
+    CureEcho("[Helper] DEBUG: No available helpers found in remaining list")
     return nil, nil
 end
 
 local function attemptHelperLogin(targetIdx)
     local targetHelper = helperConfigs[targetIdx][1][1]
-    EchoXA("[Helper] Attempting to log into: " .. targetHelper)
+    CureEcho("[Helper] Attempting to log into: " .. targetHelper)
     
-    if ARRelogXA(targetHelper) then
+    if CureARRelog(targetHelper) then
         return true
     else
         failedHelpers[targetHelper] = true
-        EchoXA("[Helper] FAILED: Helper " .. targetHelper .. " marked as failed after " .. maxRelogAttempts .. " attempts")
+        CureEcho("[Helper] FAILED: Helper " .. targetHelper .. " marked as failed after " .. maxRelogAttempts .. " attempts")
         return false
     end
 end
@@ -738,7 +739,7 @@ local function reportRotationStatus()
     
     local remainingCount = totalHelpers - failedCount - completedCount
     
-    EchoXA(string.format("[Helper] Rotation Status: %d/%d runs remaining (%d completed, %d failed, %d skipped)", 
+    CureEcho(string.format("[Helper] Rotation Status: %d/%d runs remaining (%d completed, %d failed, %d skipped)", 
         remainingCount, totalHelpers, completedCount, failedCount, skippedCount))
 end
 
@@ -747,14 +748,14 @@ local function switchToNextHelper()
     
     -- Check if we hit 2 consecutive timeouts
     if consecutiveTimeouts >= maxConsecutiveTimeouts then
-        EchoXA("[Helper] === 2 CONSECUTIVE TIMEOUTS REACHED ===")
-        EchoXA("[Helper] Main account stopped inviting")
-        EchoXA("[Helper] Activating Multi Mode until daily reset...")
+        CureEcho("[Helper] === 2 CONSECUTIVE TIMEOUTS REACHED ===")
+        CureEcho("[Helper] Main account stopped inviting")
+        CureEcho("[Helper] Activating Multi Mode until daily reset...")
         
-        EnableARMultiXA()
+        CureEnableARMulti()
         allHelpersCompleted = true
         
-        EchoXA("[Helper] Multi Mode enabled - waiting for daily reset at " .. dailyResetHour .. ":00 UTC+1")
+        CureEcho("[Helper] Multi Mode enabled - waiting for daily reset at " .. dailyResetHour .. ":00 UTC+1")
         return false
     end
     
@@ -763,35 +764,35 @@ local function switchToNextHelper()
     
     if not nextIdx then
         -- Reached end of helper list
-        EchoXA("[Helper] === LAST CHARACTER REACHED ===")
-        EchoXA("[Helper] Completed rotation through all helpers")
-        EchoXA("[Helper] Activating Multi Mode until daily reset...")
+        CureEcho("[Helper] === LAST CHARACTER REACHED ===")
+        CureEcho("[Helper] Completed rotation through all helpers")
+        CureEcho("[Helper] Activating Multi Mode until daily reset...")
         
-        EnableARMultiXA()
+        CureEnableARMulti()
         allHelpersCompleted = true
         
-        EchoXA("[Helper] Multi Mode enabled - waiting for daily reset at " .. dailyResetHour .. ":00 UTC+1")
+        CureEcho("[Helper] Multi Mode enabled - waiting for daily reset at " .. dailyResetHour .. ":00 UTC+1")
         return false
     end
     
-    EchoXA("[Helper] Switching to next run: " .. nextHelper .. " (for " .. helperConfigs[nextIdx][2] .. ")")
+    CureEcho("[Helper] Switching to next run: " .. nextHelper .. " (for " .. helperConfigs[nextIdx][2] .. ")")
     
     if attemptHelperLogin(nextIdx) then
-        EchoXA("[Helper] DEBUG: Updating idx from " .. (idx or "nil") .. " to " .. nextIdx)
+        CureEcho("[Helper] DEBUG: Updating idx from " .. (idx or "nil") .. " to " .. nextIdx)
         if helperConfigs[nextIdx] and helperConfigs[nextIdx][1] and helperConfigs[nextIdx][1][1] then
             currentHelper = tostring(nextHelper):lower()
             currentToon = helperConfigs[nextIdx][2] and tostring(helperConfigs[nextIdx][2]) or ""
             idx = nextIdx
             
-            EchoXA("[Helper] DEBUG: Current helper updated to: " .. currentHelper .. " (idx: " .. idx .. ")")
-            EchoXA("[Helper] DEBUG: Expected toon: " .. currentToon)
+            CureEcho("[Helper] DEBUG: Current helper updated to: " .. currentHelper .. " (idx: " .. idx .. ")")
+            CureEcho("[Helper] DEBUG: Expected toon: " .. currentToon)
         else
-            EchoXA("[Helper] ERROR: Invalid helper configuration at index " .. nextIdx)
+            CureEcho("[Helper] ERROR: Invalid helper configuration at index " .. nextIdx)
             return false
         end
         
-        EnableTextAdvanceXA()
-        SleepXA(2)
+        CureEnableTextAdvance()
+        CureSleep(2)
         
         return true
     else
@@ -804,117 +805,117 @@ end
 -- ===============================================
 
 local function InitializeHelper()
-    EchoXA("[Helper] === INITIALIZING HELPER ===")
-    EchoXA("[Helper] Current Helper: " .. helperConfigs[idx][1][1])
+    CureEcho("[Helper] === INITIALIZING HELPER ===")
+    CureEcho("[Helper] Current Helper: " .. helperConfigs[idx][1][1])
     
     -- Step 1: Check if Duty Roulette reward already received
-    EchoXA("[Helper] Step 1: Checking Duty Roulette reward status...")
+    CureEcho("[Helper] Step 1: Checking Duty Roulette reward status...")
     local checkSuccess, rewardStatus = CheckDutyRouletteReward()
     
     if not checkSuccess then
-        EchoXA("[Helper] ERROR: Failed to check roulette status - marking helper as failed")
+        CureEcho("[Helper] ERROR: Failed to check roulette status - marking helper as failed")
         local actualHelperName = helperConfigs[idx][1][1]
         failedHelpers[actualHelperName] = true
-        EchoXA("[Helper] === HELPER INITIALIZATION ABORTED (ERROR) ===")
+        CureEcho("[Helper] === HELPER INITIALIZATION ABORTED (ERROR) ===")
         return false
     end
     
     if rewardStatus == "completed" then
-        EchoXA("[Helper] *** REWARD ALREADY RECEIVED - SKIPPING HELPER ***")
+        CureEcho("[Helper] *** REWARD ALREADY RECEIVED - SKIPPING HELPER ***")
         local actualHelperName = helperConfigs[idx][1][1]
         completedHelpers[actualHelperName] = true
-        EchoXA("[Helper] === HELPER INITIALIZATION ABORTED (COMPLETED) ===")
+        CureEcho("[Helper] === HELPER INITIALIZATION ABORTED (COMPLETED) ===")
         return false
     end
     
-    EchoXA("[Helper] Roulette available - proceeding with DC Travel and party wait")
+    CureEcho("[Helper] Roulette available - proceeding with DC Travel and party wait")
     
     -- Step 2: Disable BTB (if enabled)
-    EchoXA("[Helper] Step 2: Disabling BTB...")
+    CureEcho("[Helper] Step 2: Disabling BTB...")
     yield("/xldisableprofile BTB")
-    SleepXA(2)
-    CharacterSafeWaitXA()
+    CureSleep(2)
+    CureCharacterSafeWait()
     
     -- Step 3: Perform DC Travel
-    EchoXA("[Helper] Step 3: Performing Data Center Travel...")
+    CureEcho("[Helper] Step 3: Performing Data Center Travel...")
     PerformDCTravel()
-    CharacterSafeWaitXA()
+    CureCharacterSafeWait()
     
     -- Step 4: Enable BTB
-    EchoXA("[Helper] Step 4: Enabling BTB...")
+    CureEcho("[Helper] Step 4: Enabling BTB...")
     yield("/xlenableprofile BTB")
-    SleepXA(2)
-    CharacterSafeWaitXA()
+    CureSleep(2)
+    CureCharacterSafeWait()
     
     -- Step 5: Wait for party invite and determine correct helper
-    EchoXA("[Helper] Step 5: Waiting for party invite...")
+    CureEcho("[Helper] Step 5: Waiting for party invite...")
     waitingForInvite = true
     local invited, status, foundMain, foundIdx, foundHelper = WaitForPartyInvite(partyCheckTimeout)
     waitingForInvite = false
     
     if not invited then
-        EchoXA("[Helper] ERROR: No party invite received - marking current helper as SKIPPED (can retry later)")
+        CureEcho("[Helper] ERROR: No party invite received - marking current helper as SKIPPED (can retry later)")
         local actualHelperName = helperConfigs[idx][1][1]
         skippedHelpers[actualHelperName] = true
         consecutiveTimeouts = consecutiveTimeouts + 1
-        EchoXA("[Helper] Consecutive timeouts: " .. consecutiveTimeouts .. "/" .. maxConsecutiveTimeouts)
-        EchoXA("[Helper] === HELPER INITIALIZATION ABORTED (NO INVITE) ===")
+        CureEcho("[Helper] Consecutive timeouts: " .. consecutiveTimeouts .. "/" .. maxConsecutiveTimeouts)
+        CureEcho("[Helper] === HELPER INITIALIZATION ABORTED (NO INVITE) ===")
         
         yield("/xldisableprofile BTB")
-        SleepXA(2)
+        CureSleep(2)
         ReturnToHomeworld()
         return false
     end
     
     if status == "unknown" then
-        EchoXA("[Helper] ERROR: Party member not recognized in configuration")
-        EchoXA("[Helper] === HELPER INITIALIZATION ABORTED (UNKNOWN MAIN) ===")
-        EchoXA("[Helper] Marking as SKIPPED (can retry if needed)")
+        CureEcho("[Helper] ERROR: Party member not recognized in configuration")
+        CureEcho("[Helper] === HELPER INITIALIZATION ABORTED (UNKNOWN MAIN) ===")
+        CureEcho("[Helper] Marking as SKIPPED (can retry if needed)")
         
         local actualHelperName = helperConfigs[idx][1][1]
         skippedHelpers[actualHelperName] = true
         consecutiveTimeouts = consecutiveTimeouts + 1
-        EchoXA("[Helper] Consecutive timeouts: " .. consecutiveTimeouts .. "/" .. maxConsecutiveTimeouts)
+        CureEcho("[Helper] Consecutive timeouts: " .. consecutiveTimeouts .. "/" .. maxConsecutiveTimeouts)
         
         yield("/xldisableprofile BTB")
-        SleepXA(2)
+        CureSleep(2)
         yield("/leave")
-        SleepXA(2)
+        CureSleep(2)
         ReturnToHomeworld()
         return false
     end
     
     -- Successfully got a valid invite - reset timeout counter
     consecutiveTimeouts = 0
-    EchoXA("[Helper] Valid invite received - timeout counter reset")
+    CureEcho("[Helper] Valid invite received - timeout counter reset")
     
     -- Check if we need to switch to a different helper
     if foundIdx ~= idx then
-        EchoXA("[Helper] ✓ Party has main character: " .. foundMain)
-        EchoXA("[Helper] ✓ This requires helper: " .. foundHelper)
-        EchoXA("[Helper] ⚠ Current helper is wrong - switching now...")
+        CureEcho("[Helper] ✓ Party has main character: " .. foundMain)
+        CureEcho("[Helper] ✓ This requires helper: " .. foundHelper)
+        CureEcho("[Helper] ⚠ Current helper is wrong - switching now...")
         
         -- Leave party and return home
         yield("/xldisableprofile BTB")
-        SleepXA(2)
+        CureSleep(2)
         yield("/leave")
-        SleepXA(2)
+        CureSleep(2)
         ReturnToHomeworld()
         
         -- Check if target helper is already completed or failed
         if completedHelpers[foundHelper] then
-            EchoXA("[Helper] ✗ Required helper already completed: " .. foundHelper)
-            EchoXA("[Helper] Cannot switch to completed helper")
-            EchoXA("[Helper] Marking current helper as SKIPPED")
+            CureEcho("[Helper] ✗ Required helper already completed: " .. foundHelper)
+            CureEcho("[Helper] Cannot switch to completed helper")
+            CureEcho("[Helper] Marking current helper as SKIPPED")
             local actualHelperName = helperConfigs[idx][1][1]
             skippedHelpers[actualHelperName] = true
             return false
         end
         
         if failedHelpers[foundHelper] then
-            EchoXA("[Helper] ✗ Required helper marked as HARD FAILED: " .. foundHelper)
-            EchoXA("[Helper] Cannot switch to hard failed helper")
-            EchoXA("[Helper] Marking current helper as SKIPPED")
+            CureEcho("[Helper] ✗ Required helper marked as HARD FAILED: " .. foundHelper)
+            CureEcho("[Helper] Cannot switch to hard failed helper")
+            CureEcho("[Helper] Marking current helper as SKIPPED")
             local actualHelperName = helperConfigs[idx][1][1]
             skippedHelpers[actualHelperName] = true
             return false
@@ -922,17 +923,17 @@ local function InitializeHelper()
         
         -- Check if target helper was skipped - if so, CLEAR the skip flag!
         if skippedHelpers[foundHelper] then
-            EchoXA("[Helper] ✓ Required helper was SKIPPED earlier: " .. foundHelper)
-            EchoXA("[Helper] Clearing skip flag - this helper is now needed!")
+            CureEcho("[Helper] ✓ Required helper was SKIPPED earlier: " .. foundHelper)
+            CureEcho("[Helper] Clearing skip flag - this helper is now needed!")
             skippedHelpers[foundHelper] = nil
         end
         
         -- Switch to the correct helper
-        EchoXA("[Helper] Switching to correct helper: " .. foundHelper)
-        if ARRelogXA(foundHelper) then
+        CureEcho("[Helper] Switching to correct helper: " .. foundHelper)
+        if CureARRelog(foundHelper) then
             -- Clear skip flag if it was set
             if skippedHelpers[foundHelper] then
-                EchoXA("[Helper] Clearing skip flag for: " .. foundHelper)
+                CureEcho("[Helper] Clearing skip flag for: " .. foundHelper)
                 skippedHelpers[foundHelper] = nil
             end
             
@@ -940,26 +941,26 @@ local function InitializeHelper()
             currentHelper = tostring(foundHelper):lower()
             currentToon = foundMain
             
-            EchoXA("[Helper] ✓ Successfully switched to correct helper!")
-            EchoXA("[Helper] Now running as: " .. foundHelper)
-            EchoXA("[Helper] For main character: " .. foundMain)
+            CureEcho("[Helper] ✓ Successfully switched to correct helper!")
+            CureEcho("[Helper] Now running as: " .. foundHelper)
+            CureEcho("[Helper] For main character: " .. foundMain)
             
-            EnableTextAdvanceXA()
-            SleepXA(2)
+            CureEnableTextAdvance()
+            CureSleep(2)
             
             -- Restart initialization with correct helper
             return InitializeHelper()
         else
-            EchoXA("[Helper] ERROR: Failed to switch to correct helper")
+            CureEcho("[Helper] ERROR: Failed to switch to correct helper")
             failedHelpers[foundHelper] = true
             return false
         end
     end
     
     -- Current helper is correct
-    EchoXA("[Helper] ✓ Correct helper for main character: " .. foundMain)
-    EchoXA("[Helper] === HELPER INITIALIZATION COMPLETE ===")
-    EchoXA("[Helper] Ready for duty!")
+    CureEcho("[Helper] ✓ Correct helper for main character: " .. foundMain)
+    CureEcho("[Helper] === HELPER INITIALIZATION COMPLETE ===")
+    CureEcho("[Helper] Ready for duty!")
     return true
 end
 
@@ -969,7 +970,7 @@ end
 
 idx = getHelperIndex(currentHelper)
 if not idx then
-    EchoXA("[Helper] Start helper not in rotation: " .. currentHelper)
+    CureEcho("[Helper] Start helper not in rotation: " .. currentHelper)
     -- Try to start with first helper
     idx = 1
     currentHelper = helperConfigs[1][1][1] and tostring(helperConfigs[1][1][1]):lower() or ""
@@ -979,10 +980,10 @@ end
 local loginSuccess = false
 local currentIdx = idx
 
-EchoXA("[Helper] === STARTING HELPER AUTOMATION WITH ROTATION ===")
+CureEcho("[Helper] === STARTING HELPER AUTOMATION WITH ROTATION ===")
 InitializeDailyResetState()
-EchoXA("[Helper] Daily Reset Time: " .. dailyResetHour .. ":00 UTC+1")
-EchoXA("[Helper] Starting helper rotation...")
+CureEcho("[Helper] Daily Reset Time: " .. dailyResetHour .. ":00 UTC+1")
+CureEcho("[Helper] Starting helper rotation...")
 reportRotationStatus()
 
 -- Initial login
@@ -991,44 +992,44 @@ while not loginSuccess and #failedHelpers < #helperConfigs do
         loginSuccess = true
         idx = currentIdx
         currentToon = helperConfigs[idx][2] and tostring(helperConfigs[idx][2]) or ""
-        EchoXA("[Helper] Successfully logged into: " .. helperConfigs[idx][1][1])
-        EchoXA("[Helper] Expected toon: " .. currentToon)
+        CureEcho("[Helper] Successfully logged into: " .. helperConfigs[idx][1][1])
+        CureEcho("[Helper] Expected toon: " .. currentToon)
     else
         local nextIdx, nextHelper = getNextAvailableHelper(currentIdx)
         if nextIdx then
-            EchoXA("[Helper] Trying next helper: " .. nextHelper)
+            CureEcho("[Helper] Trying next helper: " .. nextHelper)
             currentIdx = nextIdx
         else
-            EchoXA("[Helper] FATAL: All helpers have failed login attempts!")
+            CureEcho("[Helper] FATAL: All helpers have failed login attempts!")
             return
         end
     end
 end
 
 if not loginSuccess then
-    EchoXA("[Helper] FATAL: Unable to log into any helper. Stopping script.")
+    CureEcho("[Helper] FATAL: Unable to log into any helper. Stopping script.")
     return
 end
 
 -- Initialize first helper
-CharacterSafeWaitXA()
-EnableTextAdvanceXA()
-SleepXA(2)
+CureCharacterSafeWait()
+CureEnableTextAdvance()
+CureSleep(2)
 
 local initSuccess = InitializeHelper()
 
 -- If first helper initialization failed, keep trying
 while not initSuccess and rotationStarted do
-    EchoXA("[Helper] Initialization failed - trying next helper")
+    CureEcho("[Helper] Initialization failed - trying next helper")
     if not switchToNextHelper() then
-        EchoXA("[Helper] No more helpers available. Stopping script.")
+        CureEcho("[Helper] No more helpers available. Stopping script.")
         return
     end
     initSuccess = InitializeHelper()
 end
 
 if not initSuccess then
-    EchoXA("[Helper] All helpers failed initialization. Stopping script.")
+    CureEcho("[Helper] All helpers failed initialization. Stopping script.")
     return
 end
 
@@ -1036,14 +1037,14 @@ end
 -- Main Loop
 -- ===============================================
 
-EchoXA("[Helper] === ENTERING MAIN LOOP ===")
+CureEcho("[Helper] === ENTERING MAIN LOOP ===")
 
 while rotationStarted do
     local inDuty = false
     
     -- === DEATH CHECK ===
     if IsPlayerDead() then
-        EchoXA("[Death] === DEATH DETECTED ===")
+        CureEcho("[Death] === DEATH DETECTED ===")
         HandleDeath()
     end
     
@@ -1060,11 +1061,11 @@ while rotationStarted do
             lastDailyResetCheck = currentTime
             
             if CheckDailyReset() and not dailyResetTriggered then
-                EchoXA("[DailyReset] === DAILY RESET TRIGGERED (All Helpers Idle) ===")
+                CureEcho("[DailyReset] === DAILY RESET TRIGGERED (All Helpers Idle) ===")
                 dailyResetTriggered = true
                 
-                DisableARMultiXA()
-                SleepXA(2)
+                CureDisableARMulti()
+                CureSleep(2)
                 
                 if ResetRotation() then
                     allHelpersCompleted = false
@@ -1072,22 +1073,22 @@ while rotationStarted do
                     local initSuccess = InitializeHelper()
                     
                     while not initSuccess and rotationStarted do
-                        EchoXA("[Helper] Helper skipped after reset - trying next helper...")
+                        CureEcho("[Helper] Helper skipped after reset - trying next helper...")
                         if not switchToNextHelper() then
-                            EchoXA("[Helper] All helpers already completed after reset.")
+                            CureEcho("[Helper] All helpers already completed after reset.")
                             allHelpersCompleted = true
                             break
                         end
                         initSuccess = InitializeHelper()
                     end
                 else
-                    EchoXA("[DailyReset] ERROR: Failed to reset rotation")
+                    CureEcho("[DailyReset] ERROR: Failed to reset rotation")
                 end
             end
         end
         
         -- If all helpers completed, just sleep and continue checking for reset
-        SleepXA(5)
+        CureSleep(5)
         goto continue_loop
     end
     
@@ -1102,51 +1103,51 @@ while rotationStarted do
 
     -- Handle duty state changes
     if inDuty and not wasInDuty then
-        EchoXA("[Helper] === ENTERED DUTY ===")
-        SleepXA(dutyDelay)
+        CureEcho("[Helper] === ENTERED DUTY ===")
+        CureSleep(dutyDelay)
         
         if not adRunActive then
-            adXA("start")
+            CureAd("start")
             adRunActive = true
-            EchoXA("[Helper] AutoDuty started after entering duty")
+            CureEcho("[Helper] AutoDuty started after entering duty")
         end
         
-        vbmaiXA("on")
-        SleepXA(3)
-        FullStopMovementXA()
-        EchoXA("[Helper] Movement stopped after entering duty")
+        CureVbmai("on")
+        CureSleep(3)
+        CureFullStopMovement()
+        CureEcho("[Helper] Movement stopped after entering duty")
         
         lastMovementCheck = os.time()
         
     elseif not inDuty and wasInDuty then
-    EchoXA("[Helper] === LEFT DUTY ===")
+    CureEcho("[Helper] === LEFT DUTY ===")
     adRunActive = false
-    SleepXA(1)
-    adXA("stop")
-    EchoXA("[Helper] Left duty - AutoDuty reset")
+    CureSleep(1)
+    CureAd("stop")
+    CureEcho("[Helper] Left duty - AutoDuty reset")
     
-    EchoXA("[Helper] Disabling BTB...")
+    CureEcho("[Helper] Disabling BTB...")
     yield("/xldisableprofile BTB")
-    SleepXA(2)
+    CureSleep(2)
     
-    EchoXA("[Helper] Disbanding party...")
-    BTBDisbandXA()
-    SleepXA(5)
+    CureEcho("[Helper] Disbanding party...")
+    CureBTBDisband()
+    CureSleep(5)
     
-    EchoXA("[Helper] Returning to homeworld...")
+    CureEcho("[Helper] Returning to homeworld...")
     ReturnToHomeworld()
-    SleepXA(2)
+    CureSleep(2)
     
     if CheckDailyReset() and not dailyResetTriggered then
-        EchoXA("[DailyReset] === DAILY RESET DETECTED AFTER DUTY ===")
+        CureEcho("[DailyReset] === DAILY RESET DETECTED AFTER DUTY ===")
         dailyResetTriggered = true
         
         local actualHelperName = helperConfigs[idx][1][1]
         completedHelpers[actualHelperName] = true
         
         if allHelpersCompleted then
-            DisableARMultiXA()
-            SleepXA(2)
+            CureDisableARMulti()
+            CureSleep(2)
         end
         
         if ResetRotation() then
@@ -1165,30 +1166,30 @@ while rotationStarted do
     end
     
     -- Duty Completion Check 
-    EchoXA("[Helper] === VERIFYING DUTY COMPLETION ===")
+    CureEcho("[Helper] === VERIFYING DUTY COMPLETION ===")
     local checkSuccess, rewardStatus = CheckDutyRouletteReward()
     
     if not checkSuccess then
-        EchoXA("[Helper] WARNING: Could not verify - marking as completed anyway")
+        CureEcho("[Helper] WARNING: Could not verify - marking as completed anyway")
         local actualHelperName = helperConfigs[idx][1][1]
         completedHelpers[actualHelperName] = true
     elseif rewardStatus == "completed" then
-        EchoXA("[Helper] ✓ Duty completion verified")
+        CureEcho("[Helper] ✓ Duty completion verified")
         local actualHelperName = helperConfigs[idx][1][1]
         completedHelpers[actualHelperName] = true
     elseif rewardStatus == "available" then
-        EchoXA("[Helper] WARNING: Reward not received - will retry once")
+        CureEcho("[Helper] WARNING: Reward not received - will retry once")
         -- NUR 1x Retry, dann als completed markieren
         PerformDCTravel()
         yield("/xlenableprofile BTB")
-        SleepXA(2)
+        CureSleep(2)
         
         waitingForInvite = true
         local invited, status = WaitForPartyInvite(partyCheckTimeout)
         waitingForInvite = false
         
         if not invited or status == "unknown" then
-            EchoXA("[Helper] Retry failed - marking as completed to prevent loop")
+            CureEcho("[Helper] Retry failed - marking as completed to prevent loop")
             local actualHelperName = helperConfigs[idx][1][1]
             completedHelpers[actualHelperName] = true
         else
@@ -1200,7 +1201,7 @@ while rotationStarted do
     local subsReady = CheckSubmarines()
     if subsReady and not submarinesPaused then
         originalHelperForSubmarines = helperConfigs[idx][1][1]
-        EnableARMultiXA()
+        CureEnableARMulti()
         submarinesPaused = true
     else
         if not switchToNextHelper() then
@@ -1228,10 +1229,10 @@ end
             local subsStillReady = CheckSubmarines()
             
             if not subsStillReady then
-                EchoXA("[Subs] === NO SUBMARINES READY - CONTINUING ROTATION ===")
-                SleepXA(1)
-                DisableARMultiXA()
-                EchoXA("[Subs] Multi mode disabled - continuing with next helper")
+                CureEcho("[Subs] === NO SUBMARINES READY - CONTINUING ROTATION ===")
+                CureSleep(1)
+                CureDisableARMulti()
+                CureEcho("[Subs] Multi mode disabled - continuing with next helper")
                 
                 submarinesPaused = false
                 submarineReloginInProgress = true
@@ -1243,9 +1244,9 @@ end
     -- Handle submarine completion and continue to next helper
     if submarineReloginInProgress then
         if CheckSubmarineReloginComplete() then
-            EchoXA("[Subs] === CONTINUING TO NEXT HELPER ===")
+            CureEcho("[Subs] === CONTINUING TO NEXT HELPER ===")
             
-            EchoXA("[Helper] Switching to next helper...")
+            CureEcho("[Helper] Switching to next helper...")
             local switched = switchToNextHelper()
             
             if not switched then
@@ -1254,7 +1255,7 @@ end
                 local initSuccess = InitializeHelper()
                 
                 while not initSuccess and rotationStarted and not allHelpersCompleted do
-                    EchoXA("[Helper] Initialization failed - trying next helper...")
+                    CureEcho("[Helper] Initialization failed - trying next helper...")
                     switched = switchToNextHelper()
                     if not switched then
                         allHelpersCompleted = true
@@ -1264,7 +1265,7 @@ end
                 end
             end
         else
-            SleepXA(1)
+            CureSleep(1)
         end
     end
     
@@ -1272,17 +1273,17 @@ end
     if inDuty then
         local currentTime = os.time()
         if currentTime - lastMovementCheck >= movementCheckInterval then
-            EchoXA("[Helper] Executing periodic movement check...")
-            FullStopMovementXA()
+            CureEcho("[Helper] Executing periodic movement check...")
+            CureFullStopMovement()
             lastMovementCheck = currentTime
         end
     end
     
     ::continue_loop::
     
-    SleepXA(1)
+    CureSleep(1)
 end
 
-EchoXA("[Helper] === HELPER AUTOMATION ENDED ===")
-EchoXA("[Helper] All runs completed or script manually stopped")
+CureEcho("[Helper] === HELPER AUTOMATION ENDED ===")
+CureEcho("[Helper] All runs completed or script manually stopped")
 
