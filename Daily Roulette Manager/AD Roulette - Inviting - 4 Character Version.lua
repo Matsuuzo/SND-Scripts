@@ -46,8 +46,7 @@
 
 -- Dalamud Profile called "BTB" only using BardToolBox
 
-require("dfunc")
-require("xafunc")
+require("curefunc")
 
 -- ===============================================
 -- Configuration
@@ -147,38 +146,38 @@ local function IsPlayerDead()
 end
 
 local function HandleDeath()
-    EchoXA("[Death] Player death detected - initiating revival...")
+    CureEcho("[Death] Player death detected - initiating revival...")
     
     -- Wait for SelectYesno dialog to appear
-    SleepXA(1.5)
+    CureSleep(1.5)
     
     -- Click Yes on revival prompt
-    SelectYesnoXA()
+    CureSelectYesno()
     
     -- Wait for player to be alive again
     local attempts = 0
     local maxAttempts = 30  -- 30 seconds timeout
     
     while IsPlayerDead() and attempts < maxAttempts do
-        SleepXA(1)
+        CureSleep(1)
         attempts = attempts + 1
     end
     
     if attempts >= maxAttempts then
-        EchoXA("[Death] WARNING: Revival timeout - player may still be dead")
+        CureEcho("[Death] WARNING: Revival timeout - player may still be dead")
         return false
     end
     
-    EchoXA("[Death] Player revived successfully")
+    CureEcho("[Death] Player revived successfully")
     
     -- Wait for character to stabilize
-    SleepXA(2)
+    CureSleep(2)
     
     -- Restart AutoDuty if we were in a duty
     if adRunActive then
-        EchoXA("[Death] Restarting AutoDuty after death...")
-        adXA("start")
-        SleepXA(1)
+        CureEcho("[Death] Restarting AutoDuty after death...")
+        CureAd("start")
+        CureSleep(1)
     end
     
     return true
@@ -192,7 +191,7 @@ local function GetPartyMemberNames()
     local members = {}
     
     if not Svc or not Svc.Party then
-        EchoXA("[Party] ERROR: Svc.Party not available")
+        CureEcho("[Party] ERROR: Svc.Party not available")
         return members
     end
     
@@ -233,14 +232,14 @@ local function IsPartyComplete(helper1, helper2, helper3)
     
     -- Check party size
     if partySize ~= requiredPartySize then
-        EchoXA("[Party] Party size incorrect: " .. partySize .. "/" .. requiredPartySize)
+        CureEcho("[Party] Party size incorrect: " .. partySize .. "/" .. requiredPartySize)
         return false
     end
     
     -- Check helper 1
     if helper1 and helper1 ~= "" then
         if not IsHelperInParty(helper1) then
-            EchoXA("[Party] ✗ Helper 1 '" .. helper1 .. "' not found")
+            CureEcho("[Party] ✗ Helper 1 '" .. helper1 .. "' not found")
             return false
         end
     end
@@ -248,7 +247,7 @@ local function IsPartyComplete(helper1, helper2, helper3)
     -- Check helper 2
     if helper2 and helper2 ~= "" then
         if not IsHelperInParty(helper2) then
-            EchoXA("[Party] ✗ Helper 2 '" .. helper2 .. "' not found")
+            CureEcho("[Party] ✗ Helper 2 '" .. helper2 .. "' not found")
             return false
         end
     end
@@ -256,7 +255,7 @@ local function IsPartyComplete(helper1, helper2, helper3)
     -- Check helper 3
     if helper3 and helper3 ~= "" then
         if not IsHelperInParty(helper3) then
-            EchoXA("[Party] ✗ Helper 3 '" .. helper3 .. "' not found")
+            CureEcho("[Party] ✗ Helper 3 '" .. helper3 .. "' not found")
             return false
         end
     end
@@ -269,42 +268,42 @@ local function ListPartyMembers()
     local partySize = #members
     
     if partySize == 0 then
-        EchoXA("[Party] Solo (no party members)")
+        CureEcho("[Party] Solo (no party members)")
         return
     end
     
-    EchoXA("[Party] Party has " .. partySize .. " member(s):")
+    CureEcho("[Party] Party has " .. partySize .. " member(s):")
     for i, name in ipairs(members) do
-        EchoXA("[Party]   " .. i .. ". " .. name)
+        CureEcho("[Party]   " .. i .. ". " .. name)
     end
 end
 
 local function WaitForCompleteParty(helper1, helper2, helper3, maxRetries)
     if not enablePartyVerification then
-        EchoXA("[Party] Party verification disabled - skipping party check")
+        CureEcho("[Party] Party verification disabled - skipping party check")
         return true
     end
     
-    EchoXA("[Party] === WAITING FOR COMPLETE PARTY ===")
-    EchoXA("[Party] Required party size: " .. requiredPartySize)
+    CureEcho("[Party] === WAITING FOR COMPLETE PARTY ===")
+    CureEcho("[Party] Required party size: " .. requiredPartySize)
     
     -- Display which helpers are being verified
     local verifyCount = 0
     if helper1 and helper1 ~= "" then
-        EchoXA("[Party] Helper 1: " .. helper1)
+        CureEcho("[Party] Helper 1: " .. helper1)
         verifyCount = verifyCount + 1
     end
     if helper2 and helper2 ~= "" then
-        EchoXA("[Party] Helper 2: " .. helper2)
+        CureEcho("[Party] Helper 2: " .. helper2)
         verifyCount = verifyCount + 1
     end
     if helper3 and helper3 ~= "" then
-        EchoXA("[Party] Helper 3: " .. helper3)
+        CureEcho("[Party] Helper 3: " .. helper3)
         verifyCount = verifyCount + 1
     end
     
     if verifyCount == 0 then
-        EchoXA("[Party] WARNING: No helpers configured for verification")
+        CureEcho("[Party] WARNING: No helpers configured for verification")
     end
     
     local retryCount = 0
@@ -312,19 +311,19 @@ local function WaitForCompleteParty(helper1, helper2, helper3, maxRetries)
     while retryCount < maxRetries do
         -- Check if party is complete
         if IsPartyComplete(helper1, helper2, helper3) then
-            EchoXA("[Party] ✓ Party is complete!")
+            CureEcho("[Party] ✓ Party is complete!")
             
             -- Display which helpers were verified
             if verifyCount > 0 then
-                EchoXA("[Party] ✓ All required helpers present:")
+                CureEcho("[Party] ✓ All required helpers present:")
                 if helper1 and helper1 ~= "" then
-                    EchoXA("[Party]   ✓ Helper 1: " .. helper1)
+                    CureEcho("[Party]   ✓ Helper 1: " .. helper1)
                 end
                 if helper2 and helper2 ~= "" then
-                    EchoXA("[Party]   ✓ Helper 2: " .. helper2)
+                    CureEcho("[Party]   ✓ Helper 2: " .. helper2)
                 end
                 if helper3 and helper3 ~= "" then
-                    EchoXA("[Party]   ✓ Helper 3: " .. helper3)
+                    CureEcho("[Party]   ✓ Helper 3: " .. helper3)
                 end
             end
             
@@ -334,15 +333,15 @@ local function WaitForCompleteParty(helper1, helper2, helper3, maxRetries)
         
         -- Party not complete, send invite again
         retryCount = retryCount + 1
-        EchoXA("[Party] Party incomplete - Retry " .. retryCount .. "/" .. maxRetries)
-        EchoXA("[Party] Sending party invite again...")
+        CureEcho("[Party] Party incomplete - Retry " .. retryCount .. "/" .. maxRetries)
+        CureEcho("[Party] Sending party invite again...")
         
-        EnableBTBandInviteXA()
-        SleepXA(3)
+        CureEnableBTBandInvite()
+        CureSleep(3)
         
         -- Check again immediately after invite
         if IsPartyComplete(helper1, helper2, helper3) then
-            EchoXA("[Party] ✓ Party is complete!")
+            CureEcho("[Party] ✓ Party is complete!")
             ListPartyMembers()
             return true
         end
@@ -350,12 +349,12 @@ local function WaitForCompleteParty(helper1, helper2, helper3, maxRetries)
         -- If not complete, wait before next retry
         if retryCount < maxRetries then
             local remainingRetries = maxRetries - retryCount
-            EchoXA("[Party] Waiting " .. partyCheckRetryInterval .. " seconds before next retry (" .. remainingRetries .. " retries remaining)...")
-            SleepXA(partyCheckRetryInterval)
+            CureEcho("[Party] Waiting " .. partyCheckRetryInterval .. " seconds before next retry (" .. remainingRetries .. " retries remaining)...")
+            CureSleep(partyCheckRetryInterval)
         end
     end
     
-    EchoXA("[Party] ✗ FAILED: Party did not complete after " .. maxRetries .. " retries (" .. (maxRetries * partyCheckRetryInterval / 60) .. " minutes)")
+    CureEcho("[Party] ✗ FAILED: Party did not complete after " .. maxRetries .. " retries (" .. (maxRetries * partyCheckRetryInterval / 60) .. " minutes)")
     ListPartyMembers()
     return false
 end
@@ -369,12 +368,12 @@ local function CheckMidnight()
     local currentHour = currentTime.hour
     
     if currentHour < dailyResetHour and dailyResetTriggered then
-        EchoXA("[DailyReset] === MIDNIGHT RESET ===")
+        CureEcho("[DailyReset] === MIDNIGHT RESET ===")
         dailyResetTriggered = false
         
         if allCharactersCompleted then
-            DisableARMultiXA()
-            SleepXA(2)
+            CureDisableARMulti()
+            CureSleep(2)
             
             if ResetRotation() then
                 allCharactersCompleted = false
@@ -411,7 +410,7 @@ local function CheckDailyReset()
 end
 
 local function ResetRotation()
-    EchoXA("[DailyReset] === RESETTING CHARACTER ROTATION ===")
+    CureEcho("[DailyReset] === RESETTING CHARACTER ROTATION ===")
     
     -- Clear all completion and failure tracking
     failedCharacters = {}
@@ -419,6 +418,9 @@ local function ResetRotation()
     
     -- Reset flags
     allCharactersCompleted = false
+    dcTravelCompleted = false
+    wasInDuty = false
+    adRunActive = false
     -- Don't reset dailyResetTriggered here - it stays true until midnight
     
     -- Reset to first character
@@ -429,23 +431,23 @@ local function ResetRotation()
         currentHelper2 = charConfigs[1][3] and tostring(charConfigs[1][3]) or ""
         currentHelper3 = charConfigs[1][4] and tostring(charConfigs[1][4]) or ""
     else
-        EchoXA("[DailyReset] ERROR: First character configuration is invalid")
+        CureEcho("[DailyReset] ERROR: First character configuration is invalid")
         return false
     end
     
-    EchoXA("[DailyReset] Rotation reset complete - starting from first character")
-    EchoXA("[DailyReset] First character: " .. charConfigs[1][1][1])
-    EchoXA("[DailyReset] Helper 1: " .. currentHelper1)
-    EchoXA("[DailyReset] Helper 2: " .. currentHelper2)
-    EchoXA("[DailyReset] Helper 3: " .. currentHelper3)
+    CureEcho("[DailyReset] Rotation reset complete - starting from first character")
+    CureEcho("[DailyReset] First character: " .. charConfigs[1][1][1])
+    CureEcho("[DailyReset] Helper 1: " .. currentHelper1)
+    CureEcho("[DailyReset] Helper 2: " .. currentHelper2)
+    CureEcho("[DailyReset] Helper 3: " .. currentHelper3)
     
     -- Relog to first character
-    if ARRelogXA(charConfigs[1][1][1]) then
-        EnableTextAdvanceXA()
-        SleepXA(2)
+    if CureARRelog(charConfigs[1][1][1]) then
+        CureEnableTextAdvance()
+        CureSleep(2)
         return true
     else
-        EchoXA("[DailyReset] ERROR: Failed to relog to first character")
+        CureEcho("[DailyReset] ERROR: Failed to relog to first character")
         return false
     end
 end
@@ -469,13 +471,13 @@ local function CheckSubmarines()
     
     local configPath = GetConfigPath()
     if not configPath then
-        EchoXA("[Subs] Could not resolve config path")
+        CureEcho("[Subs] Could not resolve config path")
         return false
     end
     
     local file, err = io.open(configPath, "r")
     if not file then
-        EchoXA("[Subs] Could not open config: " .. tostring(err))
+        CureEcho("[Subs] Could not open config: " .. tostring(err))
         return false
     end
     
@@ -483,7 +485,7 @@ local function CheckSubmarines()
     file:close()
     
     if not content or content == "" then
-        EchoXA("[Subs] Config file is empty")
+        CureEcho("[Subs] Config file is empty")
         return false
     end
     
@@ -511,14 +513,14 @@ local function CheckSubmarines()
     
     if available > 0 then
         local plural = available == 1 and "Sub" or "Subs"
-        EchoXA(string.format("[Subs] %d %s available - submarine mode activated!", available, plural))
+        CureEcho(string.format("[Subs] %d %s available - submarine mode activated!", available, plural))
         return true
     end
     
     if minDelta and minDelta > 0 then
         local minutes = math.max(0, math.ceil(minDelta / 60))
         local plural = minutes == 1 and "minute" or "minutes"
-        EchoXA(string.format("[Subs] Next submarine in %d %s", minutes, plural))
+        CureEcho(string.format("[Subs] Next submarine in %d %s", minutes, plural))
     end
     
     return false
@@ -531,7 +533,7 @@ local function CheckSubmarineReloginComplete()
     
     -- Check if we have a valid original character stored
     if not originalCharForSubmarines or originalCharForSubmarines == "" then
-        EchoXA("[Subs] WARNING: No original character stored, marking submarine relogin as complete")
+        CureEcho("[Subs] WARNING: No original character stored, marking submarine relogin as complete")
         submarineReloginInProgress = false
         return true
     end
@@ -541,7 +543,7 @@ local function CheckSubmarineReloginComplete()
     local expectedName = originalCharForSubmarines:match("^([^@]+)")
     
     if not expectedName then
-        EchoXA("[Subs] WARNING: Could not extract expected name, marking submarine relogin as complete")
+        CureEcho("[Subs] WARNING: Could not extract expected name, marking submarine relogin as complete")
         submarineReloginInProgress = false
         originalCharForSubmarines = nil
         return true
@@ -551,22 +553,22 @@ local function CheckSubmarineReloginComplete()
     local expectedLower = tostring(expectedName):lower()
     
     if actualLower == expectedLower then
-        EchoXA("[Subs] Submarine relogin verification passed")
+        CureEcho("[Subs] Submarine relogin verification passed")
         submarineReloginInProgress = false
         submarineReloginAttempts = 0
         originalCharForSubmarines = nil
         
-        CharacterSafeWaitXA()
+        CureCharacterSafeWait()
         
         submarinesPaused = false
         
-        EchoXA("[Subs] === SAFETY VALIDATION COMPLETE ===")
-        EchoXA("[Subs] Resuming normal rotation on original character")
+        CureEcho("[Subs] === SAFETY VALIDATION COMPLETE ===")
+        CureEcho("[Subs] Resuming normal rotation on original character")
         
         return true
     else
-        EchoXA("[Subs] WARNING: Character mismatch after submarines. Expected: " .. expectedName .. ", Actual: " .. actualName)
-        EchoXA("[Subs] Marking submarine relogin as complete anyway to continue rotation")
+        CureEcho("[Subs] WARNING: Character mismatch after submarines. Expected: " .. expectedName .. ", Actual: " .. actualName)
+        CureEcho("[Subs] Marking submarine relogin as complete anyway to continue rotation")
         submarineReloginInProgress = false
         originalCharForSubmarines = nil
         return true
@@ -578,13 +580,13 @@ end
 -- ===============================================
 
 local function CheckDutyRouletteReward()
-    EchoXA("[RouletteCheck] === CHECKING DUTY ROULETTE REWARD STATUS ===")
+    CureEcho("[RouletteCheck] === CHECKING DUTY ROULETTE REWARD STATUS ===")
     
     yield("/dutyfinder")
-    SleepXA(2)
+    CureSleep(2)
     
     yield("/callback ContentsFinder true 2 2 0")
-    SleepXA(1)
+    CureSleep(1)
     
     local rewardReceived = nil
     local success, err = pcall(function()
@@ -598,22 +600,22 @@ local function CheckDutyRouletteReward()
     end)
     
     if not success then
-        EchoXA("[RouletteCheck] ERROR: Failed to read reward status - " .. tostring(err))
+        CureEcho("[RouletteCheck] ERROR: Failed to read reward status - " .. tostring(err))
         yield("/callback ContentsFinder true -1")
-        SleepXA(1)
+        CureSleep(1)
         return false, "error"
     end
     
-    EchoXA("[RouletteCheck] Reward Text: [" .. tostring(rewardReceived) .. "]")
+    CureEcho("[RouletteCheck] Reward Text: [" .. tostring(rewardReceived) .. "]")
     
     yield("/callback ContentsFinder true -1")
-    SleepXA(1)
+    CureSleep(1)
     
     if rewardReceived and rewardReceived ~= "" then
-        EchoXA("[RouletteCheck] === ROULETTE ALREADY COMPLETED (TEXT FOUND) ===")
+        CureEcho("[RouletteCheck] === ROULETTE ALREADY COMPLETED (TEXT FOUND) ===")
         return true, "completed"
     else
-        EchoXA("[RouletteCheck] === ROULETTE AVAILABLE (NO TEXT) ===")
+        CureEcho("[RouletteCheck] === ROULETTE AVAILABLE (NO TEXT) ===")
         return true, "available"
     end
 end
@@ -624,28 +626,44 @@ end
 
 local function PerformDCTravel()
     if dcTravelCompleted then
-        EchoXA("[DCTravel] DC Travel already completed for this character")
+        CureEcho("[DCTravel] DC Travel already completed for this character")
         return true
     end
     
     if not enableDCTravel then
-        EchoXA("[DCTravel] DC Travel is disabled - skipping")
+        CureEcho("[DCTravel] DC Travel is disabled - skipping")
         dcTravelCompleted = true
         return true
     end
     
-    EchoXA("[DCTravel] === INITIATING DATA CENTER TRAVEL ===")
-    EchoXA("[DCTravel] Target world: " .. dcTravelWorld)
+    -- Check current world before traveling
+    local currentWorld = CureGetWorldName()
+    CureEcho("[DCTravel] Current world: " .. tostring(currentWorld))
+    CureEcho("[DCTravel] Target world: " .. dcTravelWorld)
     
-    LifestreamCmdXA(dcTravelWorld)
-    CharacterSafeWaitXA()
+    if tostring(currentWorld):lower() == tostring(dcTravelWorld):lower() then
+        CureEcho("[DCTravel] Already on target world - skipping travel")
+        dcTravelCompleted = true
+        
+        CureEcho("[DCTravel] Teleporting to Horizon...")
+        yield("/li Horizon")
+        CureSleep(10)
+        
+        return true
+    end
     
-    EchoXA("[DCTravel] === DATA CENTER TRAVEL COMPLETE ===")
-    EchoXA("[DCTravel] Now on world: " .. dcTravelWorld)
+    CureEcho("[DCTravel] === INITIATING DATA CENTER TRAVEL ===")
     
-    EchoXA("[DCTravel] Teleporting to Horizon...")
+    CureLifestreamCmd(dcTravelWorld)
+    CureWaitForLifestream()
+    CureCharacterSafeWait()
+    
+    CureEcho("[DCTravel] === DATA CENTER TRAVEL COMPLETE ===")
+    CureEcho("[DCTravel] Now on world: " .. dcTravelWorld)
+    
+    CureEcho("[DCTravel] Teleporting to Horizon...")
     yield("/li Horizon")
-    SleepXA(10)
+    CureSleep(10)
     
     dcTravelCompleted = true
     return true
@@ -653,15 +671,15 @@ end
 
 local function ReturnToHomeworld()
     if not dcTravelCompleted then
-        EchoXA("[DCTravel] No DC travel was performed - skipping homeworld return")
+        CureEcho("[DCTravel] No DC travel was performed - skipping homeworld return")
         return true
     end
     
-    EchoXA("[DCTravel] === RETURNING TO HOMEWORLD ===")
+    CureEcho("[DCTravel] === RETURNING TO HOMEWORLD ===")
     
-    return_to_homeworldXA()
+    CureReturnToHomeworld()
     
-    EchoXA("[DCTravel] === HOMEWORLD RETURN COMPLETE ===")
+    CureEcho("[DCTravel] === HOMEWORLD RETURN COMPLETE ===")
     return true
 end
 
@@ -671,7 +689,7 @@ end
 
 local function VerifyCharacterSwitch(expectedName)
     if not expectedName or expectedName == "" then
-        EchoXA("[RelogAuto] ERROR: No expected name provided for verification")
+        CureEcho("[RelogAuto] ERROR: No expected name provided for verification")
         return false
     end
     
@@ -680,11 +698,11 @@ local function VerifyCharacterSwitch(expectedName)
     local actualLower = tostring(actualName):lower()
     
     if actualLower == expectedLower then
-        EchoXA("[RelogAuto] Character switch verified: Now playing as " .. actualName)
+        CureEcho("[RelogAuto] Character switch verified: Now playing as " .. actualName)
         return true
     end
     
-    EchoXA("[RelogAuto] ERROR: Character switch failed! Expected: " .. expectedName .. ", Actual: " .. actualName)
+    CureEcho("[RelogAuto] ERROR: Character switch failed! Expected: " .. expectedName .. ", Actual: " .. actualName)
     return false
 end
 
@@ -706,7 +724,7 @@ local function getNextAvailableCharacter(currentIdx)
     local attempts = 0
     local nextIdx = currentIdx or 0
     
-    EchoXA("[RelogAuto] DEBUG: Looking for next character. Current idx: " .. (currentIdx or "nil"))
+    CureEcho("[RelogAuto] DEBUG: Looking for next character. Current idx: " .. (currentIdx or "nil"))
     
     while attempts < #charConfigs do
         nextIdx = nextIdx + 1
@@ -718,30 +736,30 @@ local function getNextAvailableCharacter(currentIdx)
         local isFailed = failedCharacters[charName] or false
         local isCompleted = completedCharacters[charName] or false
         
-        EchoXA("[RelogAuto] DEBUG: Checking character " .. nextIdx .. ": " .. charName .. 
+        CureEcho("[RelogAuto] DEBUG: Checking character " .. nextIdx .. ": " .. charName .. 
                " (Failed: " .. tostring(isFailed) .. ", Completed: " .. tostring(isCompleted) .. ")")
         
         if not isFailed and not isCompleted then
-            EchoXA("[RelogAuto] DEBUG: Found available character: " .. charName)
+            CureEcho("[RelogAuto] DEBUG: Found available character: " .. charName)
             return nextIdx, charName
         end
         
         attempts = attempts + 1
     end
     
-    EchoXA("[RelogAuto] DEBUG: No available characters found")
+    CureEcho("[RelogAuto] DEBUG: No available characters found")
     return nil, nil
 end
 
 local function attemptCharacterLogin(targetIdx)
     local targetChar = charConfigs[targetIdx][1][1]
-    EchoXA("[RelogAuto] Attempting to log into: " .. targetChar)
+    CureEcho("[RelogAuto] Attempting to log into: " .. targetChar)
     
-    if ARRelogXA(targetChar) then
+    if CureARRelog(targetChar) then
         return true
     else
         failedCharacters[targetChar] = true
-        EchoXA("[RelogAuto] FAILED: Character " .. targetChar .. " marked as failed after " .. maxRelogattempts .. " attempts")
+        CureEcho("[RelogAuto] FAILED: Character " .. targetChar .. " marked as failed after " .. maxRelogattempts .. " attempts")
         return false
     end
 end
@@ -761,7 +779,7 @@ local function reportRotationStatus()
     
     local remainingCount = totalChars - failedCount - completedCount
     
-    EchoXA(string.format("[RelogAuto] Rotation Status: %d/%d characters remaining (%d completed, %d failed)", 
+    CureEcho(string.format("[RelogAuto] Rotation Status: %d/%d characters remaining (%d completed, %d failed)", 
         remainingCount, totalChars, completedCount, failedCount))
 end
 
@@ -777,31 +795,31 @@ local function switchToNextCharacter()
     end
     
     if doneCount >= #charConfigs then
-        EchoXA("[RelogAuto] === ALL CHARACTERS PROCESSED ===")
-        EchoXA("[RelogAuto] Enabling AutoRetainer Multi Mode...")
+        CureEcho("[RelogAuto] === ALL CHARACTERS PROCESSED ===")
+        CureEcho("[RelogAuto] Enabling AutoRetainer Multi Mode...")
         
-        EnableARMultiXA()
+        CureEnableARMulti()
         allCharactersCompleted = true
         
-        EchoXA("[RelogAuto] Multi Mode enabled - waiting for daily reset at " .. dailyResetHour .. ":00 UTC+1")
+        CureEcho("[RelogAuto] Multi Mode enabled - waiting for daily reset at " .. dailyResetHour .. ":00 UTC+1")
         return false
     end
     
     local nextIdx, nextCharacter = getNextAvailableCharacter(idx)
     if not nextIdx then
-        EchoXA("[RelogAuto] No more available characters.")
+        CureEcho("[RelogAuto] No more available characters.")
         
-        EnableARMultiXA()
+        CureEnableARMulti()
         allCharactersCompleted = true
         
-        EchoXA("[RelogAuto] Multi Mode enabled - waiting for daily reset at " .. dailyResetHour .. ":00 UTC+1")
+        CureEcho("[RelogAuto] Multi Mode enabled - waiting for daily reset at " .. dailyResetHour .. ":00 UTC+1")
         return false
     end
     
-    EchoXA("[RelogAuto] Switching to next character: " .. nextCharacter)
+    CureEcho("[RelogAuto] Switching to next character: " .. nextCharacter)
     
     if attemptCharacterLogin(nextIdx) then
-        EchoXA("[RelogAuto] DEBUG: Updating idx from " .. (idx or "nil") .. " to " .. nextIdx)
+        CureEcho("[RelogAuto] DEBUG: Updating idx from " .. (idx or "nil") .. " to " .. nextIdx)
         if charConfigs[nextIdx] and charConfigs[nextIdx][1] and charConfigs[nextIdx][1][1] then
             currentChar = tostring(nextCharacter):lower()
             currentHelper1 = charConfigs[nextIdx][2] and tostring(charConfigs[nextIdx][2]) or ""
@@ -809,17 +827,23 @@ local function switchToNextCharacter()
             currentHelper3 = charConfigs[nextIdx][4] and tostring(charConfigs[nextIdx][4]) or ""
             idx = nextIdx
             
-            EchoXA("[RelogAuto] DEBUG: Current character updated to: " .. currentChar .. " (idx: " .. idx .. ")")
-            EchoXA("[RelogAuto] DEBUG: Helper 1: " .. currentHelper1)
-            EchoXA("[RelogAuto] DEBUG: Helper 2: " .. currentHelper2)
-            EchoXA("[RelogAuto] DEBUG: Helper 3: " .. currentHelper3)
+            -- CRITICAL: Reset flags for new character
+            dcTravelCompleted = false
+            wasInDuty = false
+            adRunActive = false
+            
+            CureEcho("[RelogAuto] DEBUG: Current character updated to: " .. currentChar .. " (idx: " .. idx .. ")")
+            CureEcho("[RelogAuto] DEBUG: Helper 1: " .. currentHelper1)
+            CureEcho("[RelogAuto] DEBUG: Helper 2: " .. currentHelper2)
+            CureEcho("[RelogAuto] DEBUG: Helper 3: " .. currentHelper3)
+            CureEcho("[RelogAuto] DEBUG: Flags reset - dcTravelCompleted: false, wasInDuty: false, adRunActive: false")
         else
-            EchoXA("[RelogAuto] ERROR: Invalid character configuration at index " .. nextIdx)
+            CureEcho("[RelogAuto] ERROR: Invalid character configuration at index " .. nextIdx)
             return false
         end
         
-        EnableTextAdvanceXA()
-        SleepXA(2)
+        CureEnableTextAdvance()
+        CureSleep(2)
         
         return true
     else
@@ -832,10 +856,10 @@ end
 -- ===============================================
 
 local function QueueDutyRoulette()
-    EchoXA("[RelogAuto] Queueing Duty Roulette ID: " .. dutyRouletteID)
+    CureEcho("[RelogAuto] Queueing Duty Roulette ID: " .. dutyRouletteID)
     
     if wasInDuty then
-        EchoXA("[RelogAuto] Already in duty, skipping queue")
+        CureEcho("[RelogAuto] Already in duty, skipping queue")
         return false
     end
     
@@ -844,10 +868,10 @@ local function QueueDutyRoulette()
     end)
     
     if success then
-        EchoXA("[RelogAuto] Successfully queued for Duty Roulette")
+        CureEcho("[RelogAuto] Successfully queued for Duty Roulette")
         return true
     else
-        EchoXA("[RelogAuto] ERROR: Failed to queue - " .. tostring(err))
+        CureEcho("[RelogAuto] ERROR: Failed to queue - " .. tostring(err))
         return false
     end
 end
@@ -857,66 +881,66 @@ end
 -- ===============================================
 
 local function InitializeCharacter()
-    EchoXA("[RelogAuto] === INITIALIZING CHARACTER ===")
-    EchoXA("[RelogAuto] Character: " .. charConfigs[idx][1][1])
-    EchoXA("[RelogAuto] Helper 1: " .. currentHelper1)
-    EchoXA("[RelogAuto] Helper 2: " .. currentHelper2)
-    EchoXA("[RelogAuto] Helper 3: " .. currentHelper3)
+    CureEcho("[RelogAuto] === INITIALIZING CHARACTER ===")
+    CureEcho("[RelogAuto] Character: " .. charConfigs[idx][1][1])
+    CureEcho("[RelogAuto] Helper 1: " .. currentHelper1)
+    CureEcho("[RelogAuto] Helper 2: " .. currentHelper2)
+    CureEcho("[RelogAuto] Helper 3: " .. currentHelper3)
     
     -- Step 1: Check if Duty Roulette reward already received
-    EchoXA("[RelogAuto] Step 1: Checking Duty Roulette reward status...")
+    CureEcho("[RelogAuto] Step 1: Checking Duty Roulette reward status...")
     local checkSuccess, rewardStatus = CheckDutyRouletteReward()
     
     if not checkSuccess then
-        EchoXA("[RelogAuto] ERROR: Failed to check roulette status - marking character as failed")
+        CureEcho("[RelogAuto] ERROR: Failed to check roulette status - marking character as failed")
         local actualCharName = charConfigs[idx][1][1]
         failedCharacters[actualCharName] = true
-        EchoXA("[RelogAuto] === CHARACTER INITIALIZATION ABORTED (ERROR) ===")
+        CureEcho("[RelogAuto] === CHARACTER INITIALIZATION ABORTED (ERROR) ===")
         return false
     end
     
     if rewardStatus == "completed" then
-        EchoXA("[RelogAuto] *** REWARD ALREADY RECEIVED - SKIPPING CHARACTER ***")
+        CureEcho("[RelogAuto] *** REWARD ALREADY RECEIVED - SKIPPING CHARACTER ***")
         local actualCharName = charConfigs[idx][1][1]
         completedCharacters[actualCharName] = true
-        EchoXA("[RelogAuto] === CHARACTER INITIALIZATION ABORTED (COMPLETED) ===")
+        CureEcho("[RelogAuto] === CHARACTER INITIALIZATION ABORTED (COMPLETED) ===")
         return false
     end
     
-    EchoXA("[RelogAuto] Roulette available - proceeding with DC Travel and queue")
+    CureEcho("[RelogAuto] Roulette available - proceeding with DC Travel and queue")
     
     -- Step 2: Perform DC Travel
-    EchoXA("[RelogAuto] Step 2: Performing Data Center Travel...")
+    CureEcho("[RelogAuto] Step 2: Performing Data Center Travel...")
     PerformDCTravel()
-    CharacterSafeWaitXA()
+    CureCharacterSafeWait()
     
     -- Step 3: Enable BTB and send invite
-    EchoXA("[RelogAuto] Step 3: Enabling BTB and sending party invite...")
-    EnableBTBandInviteXA()
-    CharacterSafeWaitXA()
+    CureEcho("[RelogAuto] Step 3: Enabling BTB and sending party invite...")
+    CureEnableBTBandInvite()
+    CureCharacterSafeWait()
     
     -- Step 4: Wait for complete party (ALL helpers + correct size)
-    EchoXA("[RelogAuto] Step 4: Verifying party composition...")
+    CureEcho("[RelogAuto] Step 4: Verifying party composition...")
     if not WaitForCompleteParty(currentHelper1, currentHelper2, currentHelper3, partyCheckMaxRetries) then
-        EchoXA("[RelogAuto] ERROR: Party verification failed after " .. partyCheckMaxRetries .. " retries!")
-        EchoXA("[RelogAuto] Marking character as failed...")
+        CureEcho("[RelogAuto] ERROR: Party verification failed after " .. partyCheckMaxRetries .. " retries!")
+        CureEcho("[RelogAuto] Marking character as failed...")
         local actualCharName = charConfigs[idx][1][1]
         failedCharacters[actualCharName] = true
         
         -- Disband party before moving to next character
-        BTBDisbandXA()
-        SleepXA(2)
+        CureBTBDisband()
+        CureSleep(2)
         
-        EchoXA("[RelogAuto] === CHARACTER INITIALIZATION ABORTED (PARTY VERIFICATION FAILED) ===")
+        CureEcho("[RelogAuto] === CHARACTER INITIALIZATION ABORTED (PARTY VERIFICATION FAILED) ===")
         return false
     end
     
     -- Step 5: Queue Duty Roulette
-    EchoXA("[RelogAuto] Step 5: Queueing Duty Roulette...")
+    CureEcho("[RelogAuto] Step 5: Queueing Duty Roulette...")
     QueueDutyRoulette()
-    SleepXA(2)
+    CureSleep(2)
     
-    EchoXA("[RelogAuto] === CHARACTER INITIALIZATION COMPLETE ===")
+    CureEcho("[RelogAuto] === CHARACTER INITIALIZATION COMPLETE ===")
     return true
 end
 
@@ -926,17 +950,17 @@ end
 
 idx = getCharIndex(currentChar)
 if not idx then
-    EchoXA("[RelogAuto] Start character not in rotation: " .. currentChar)
+    CureEcho("[RelogAuto] Start character not in rotation: " .. currentChar)
     return
 end
 
 local loginSuccess = false
 local currentIdx = idx
 
-EchoXA("[RelogAuto] === STARTING AD RELOG AUTOMATION WITH DC TRAVEL & MULTI-HELPER VERIFICATION ===")
-EchoXA("[RelogAuto] Party Verification: " .. (enablePartyVerification and "ENABLED" or "DISABLED"))
-EchoXA("[RelogAuto] Daily Reset Time: " .. dailyResetHour .. ":00 UTC+1")
-EchoXA("[RelogAuto] Starting character rotation...")
+CureEcho("[RelogAuto] === STARTING AD RELOG AUTOMATION WITH DC TRAVEL & MULTI-HELPER VERIFICATION ===")
+CureEcho("[RelogAuto] Party Verification: " .. (enablePartyVerification and "ENABLED" or "DISABLED"))
+CureEcho("[RelogAuto] Daily Reset Time: " .. dailyResetHour .. ":00 UTC+1")
+CureEcho("[RelogAuto] Starting character rotation...")
 reportRotationStatus()
 
 -- Initial login
@@ -947,46 +971,46 @@ while not loginSuccess and #failedCharacters < #charConfigs do
         currentHelper1 = charConfigs[idx][2] and tostring(charConfigs[idx][2]) or ""
         currentHelper2 = charConfigs[idx][3] and tostring(charConfigs[idx][3]) or ""
         currentHelper3 = charConfigs[idx][4] and tostring(charConfigs[idx][4]) or ""
-        EchoXA("[RelogAuto] Successfully logged into: " .. charConfigs[idx][1][1])
-        EchoXA("[RelogAuto] Helper 1: " .. currentHelper1)
-        EchoXA("[RelogAuto] Helper 2: " .. currentHelper2)
-        EchoXA("[RelogAuto] Helper 3: " .. currentHelper3)
+        CureEcho("[RelogAuto] Successfully logged into: " .. charConfigs[idx][1][1])
+        CureEcho("[RelogAuto] Helper 1: " .. currentHelper1)
+        CureEcho("[RelogAuto] Helper 2: " .. currentHelper2)
+        CureEcho("[RelogAuto] Helper 3: " .. currentHelper3)
     else
         local nextIdx, nextChar = getNextAvailableCharacter(currentIdx)
         if nextIdx then
-            EchoXA("[RelogAuto] Trying next character: " .. nextChar)
+            CureEcho("[RelogAuto] Trying next character: " .. nextChar)
             currentIdx = nextIdx
         else
-            EchoXA("[RelogAuto] FATAL: All characters have failed login attempts!")
+            CureEcho("[RelogAuto] FATAL: All characters have failed login attempts!")
             return
         end
     end
 end
 
 if not loginSuccess then
-    EchoXA("[RelogAuto] FATAL: Unable to log into any character. Stopping script.")
+    CureEcho("[RelogAuto] FATAL: Unable to log into any character. Stopping script.")
     return
 end
 
 -- Initialize first character
-CharacterSafeWaitXA()
-EnableTextAdvanceXA()
-SleepXA(2)
+CureCharacterSafeWait()
+CureEnableTextAdvance()
+CureSleep(2)
 
 local initSuccess = InitializeCharacter()
 
 -- If first character already completed, keep trying until we find an available one
 while not initSuccess and rotationStarted do
-    EchoXA("[RelogAuto] First character skipped - trying next")
+    CureEcho("[RelogAuto] First character skipped - trying next")
     if not switchToNextCharacter() then
-        EchoXA("[RelogAuto] No more characters available. Stopping script.")
+        CureEcho("[RelogAuto] No more characters available. Stopping script.")
         return
     end
     initSuccess = InitializeCharacter()
 end
 
 if not initSuccess then
-    EchoXA("[RelogAuto] All characters already completed or failed. Stopping script.")
+    CureEcho("[RelogAuto] All characters already completed or failed. Stopping script.")
     return
 end
 
@@ -994,14 +1018,14 @@ end
 -- Main Loop
 -- ===============================================
 
-EchoXA("[RelogAuto] === ENTERING MAIN LOOP ===")
+CureEcho("[RelogAuto] === ENTERING MAIN LOOP ===")
 
 while rotationStarted do
     local inDuty = false
     
     -- === DEATH CHECK ===
     if IsPlayerDead() then
-        EchoXA("[Death] === DEATH DETECTED ===")
+        CureEcho("[Death] === DEATH DETECTED ===")
         HandleDeath()
     end
     
@@ -1018,11 +1042,11 @@ while rotationStarted do
             lastDailyResetCheck = currentTime
             
             if CheckDailyReset() and not dailyResetTriggered then
-                EchoXA("[DailyReset] === DAILY RESET TRIGGERED (All Characters Idle) ===")
+                CureEcho("[DailyReset] === DAILY RESET TRIGGERED (All Characters Idle) ===")
                 dailyResetTriggered = true
                 
-                DisableARMultiXA()
-                SleepXA(2)
+                CureDisableARMulti()
+                CureSleep(2)
                 
                 if ResetRotation() then
                     allCharactersCompleted = false
@@ -1030,22 +1054,22 @@ while rotationStarted do
                     local initSuccess = InitializeCharacter()
                     
                     while not initSuccess and rotationStarted do
-                        EchoXA("[RelogAuto] Character skipped after reset - trying next character...")
+                        CureEcho("[RelogAuto] Character skipped after reset - trying next character...")
                         if not switchToNextCharacter() then
-                            EchoXA("[RelogAuto] All characters already completed after reset.")
+                            CureEcho("[RelogAuto] All characters already completed after reset.")
                             allCharactersCompleted = true
                             break
                         end
                         initSuccess = InitializeCharacter()
                     end
                 else
-                    EchoXA("[DailyReset] ERROR: Failed to reset rotation")
+                    CureEcho("[DailyReset] ERROR: Failed to reset rotation")
                 end
             end
         end
         
         -- If all characters completed, just sleep and continue checking for reset
-        SleepXA(5)
+        CureSleep(5)
         goto continue_loop
     end
     
@@ -1060,31 +1084,31 @@ while rotationStarted do
 
     -- Handle duty state changes
     if inDuty and not wasInDuty then
-        EchoXA("[RelogAuto] === ENTERED DUTY ===")
-        SleepXA(dutyDelay)
+        CureEcho("[RelogAuto] === ENTERED DUTY ===")
+        CureSleep(dutyDelay)
         
         if not adRunActive then
-            adXA("start")
+            CureAd("start")
             adRunActive = true
-            EchoXA("[RelogAuto] AutoDuty started after entering duty")
+            CureEcho("[RelogAuto] AutoDuty started after entering duty")
         end
         
-        vbmaiXA("on")
-        SleepXA(3)
-        FullStopMovementXA()
-        EchoXA("[RelogAuto] Movement stopped after entering duty")
+        CureVbmai("on")
+        CureSleep(3)
+        CureFullStopMovement()
+        CureEcho("[RelogAuto] Movement stopped after entering duty")
         
         lastMovementCheck = os.time()
         
     elseif not inDuty and wasInDuty then
-    EchoXA("[RelogAuto] === LEFT DUTY ===")
+    CureEcho("[RelogAuto] === LEFT DUTY ===")
     adRunActive = false
-    adXA("stop")
+    CureAd("stop")
     
-    BTBDisbandXA()
-    SleepXA(5)
+    CureBTBDisband()
+    CureSleep(5)
     ReturnToHomeworld()
-    SleepXA(2)
+    CureSleep(2)
     
     -- Daily Reset Check FIRST
     if CheckDailyReset() and not dailyResetTriggered then
@@ -1093,8 +1117,8 @@ while rotationStarted do
         completedCharacters[actualCharName] = true
         
         if allCharactersCompleted then
-            DisableARMultiXA()
-            SleepXA(2)
+            CureDisableARMulti()
+            CureSleep(2)
         end
         
         if ResetRotation() then
@@ -1118,8 +1142,8 @@ while rotationStarted do
         local actualCharName = charConfigs[idx][1][1]
         completedCharacters[actualCharName] = true
     elseif rewardStatus == "available" then
-        EchoXA("[RelogAuto] WARNING: Duty incomplete - ONE retry")
-        EnableBTBandInviteXA()
+        CureEcho("[RelogAuto] WARNING: Duty incomplete - ONE retry")
+        CureEnableBTBandInvite()
         if not WaitForCompleteParty(currentHelper1, currentHelper2, currentHelper3, partyCheckMaxRetries) then
             local actualCharName = charConfigs[idx][1][1]
             completedCharacters[actualCharName] = true
@@ -1133,7 +1157,7 @@ while rotationStarted do
     local subsReady = CheckSubmarines()
     if subsReady and not submarinesPaused then
         originalCharForSubmarines = charConfigs[idx][1][1]
-        EnableARMultiXA()
+        CureEnableARMulti()
         submarinesPaused = true
     else
         if not switchToNextCharacter() then
@@ -1161,10 +1185,10 @@ end
             local subsStillReady = CheckSubmarines()
             
             if not subsStillReady then
-                EchoXA("[Subs] === NO SUBMARINES READY - CONTINUING ROTATION ===")
-                SleepXA(1)
-                DisableARMultiXA()
-                EchoXA("[Subs] Multi mode disabled - continuing with next character")
+                CureEcho("[Subs] === NO SUBMARINES READY - CONTINUING ROTATION ===")
+                CureSleep(1)
+                CureDisableARMulti()
+                CureEcho("[Subs] Multi mode disabled - continuing with next character")
                 
                 submarinesPaused = false
                 submarineReloginInProgress = true
@@ -1176,18 +1200,22 @@ end
     -- Handle submarine completion and continue to next character
     if submarineReloginInProgress then
         if CheckSubmarineReloginComplete() then
-            EchoXA("[Subs] === CONTINUING TO NEXT CHARACTER ===")
+            CureEcho("[Subs] === SUBMARINE RELOGIN COMPLETE ===")
+            CureEcho("[Subs] Current idx: " .. idx .. ", Character: " .. charConfigs[idx][1][1])
+            CureEcho("[Subs] This character already completed duty, moving to next...")
             
-            EchoXA("[RelogAuto] Switching to next character...")
+            CureEcho("[RelogAuto] Switching to next character...")
             local switched = switchToNextCharacter()
             
             if not switched then
+                CureEcho("[Subs] No more characters available after submarine completion")
                 allCharactersCompleted = true
             else
+                CureEcho("[Subs] Switched to new character, initializing...")
                 local initSuccess = InitializeCharacter()
                 
                 while not initSuccess and rotationStarted and not allCharactersCompleted do
-                    EchoXA("[RelogAuto] Character skipped - trying next character...")
+                    CureEcho("[RelogAuto] Character skipped - trying next character...")
                     switched = switchToNextCharacter()
                     if not switched then
                         allCharactersCompleted = true
@@ -1197,7 +1225,7 @@ end
                 end
             end
         else
-            SleepXA(1)
+            CureSleep(1)
         end
     end
     
@@ -1205,18 +1233,18 @@ end
     if inDuty then
         local currentTime = os.time()
         if currentTime - lastMovementCheck >= movementCheckInterval then
-            EchoXA("[RelogAuto] Executing periodic movement check...")
-            FullStopMovementXA()
+            CureEcho("[RelogAuto] Executing periodic movement check...")
+            CureFullStopMovement()
             lastMovementCheck = currentTime
         end
     end
     
     ::continue_loop::
     
-    SleepXA(1)
+    CureSleep(1)
 end
 
-EchoXA("[RelogAuto] === AD RELOG AUTOMATION ENDED ===")
-EchoXA("[RelogAuto] All characters processed or script manually stopped")
+CureEcho("[RelogAuto] === AD RELOG AUTOMATION ENDED ===")
+CureEcho("[RelogAuto] All characters processed or script manually stopped")
 
 
