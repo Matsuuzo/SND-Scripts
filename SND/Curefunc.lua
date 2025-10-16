@@ -13,8 +13,8 @@
 -- | SomethingNeedDoing scripts. This library includes movement, UI, player management, and world
 -- | interaction utilities designed for reliable multi-character automation workflows.
 -- |
--- | Version: 2.2
--- | Last Updated: 2025-10-15
+-- | Version: 2.1
+-- | Last Updated: 2025-10-13
 -- |
 -- └-----------------------------------------------------------------------------------------------------------------------
 --┌-----------------------------------------------------------------------------------------------------------------------
