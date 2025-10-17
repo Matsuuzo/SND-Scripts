@@ -1873,6 +1873,19 @@ function CurePathIsRunning()
 end
 
 --┌─────────────────────────────────────────────────────────────────────────────────────────────────────────
+--│ CureFullStopMovement()
+--│ Stops all character movement (VNavmesh and automove)
+--│
+--│ Usage:
+--│   CureFullStopMovement()  -- Stops all movement immediately
+--└─────────────────────────────────────────────────────────────────────────────────────────────────────────
+function CureFullStopMovement()
+    CureVnav("stop")
+    yield("/automove off")
+    CureSleep(0.1)
+end
+
+--┌─────────────────────────────────────────────────────────────────────────────────────────────────────────
 --│ CurePeriodicMovementCheck(lastMovementCheck, movementCheckInterval, inDuty)
 --│ Periodically stops VNav movement to prevent stuck states
 --│
@@ -2055,6 +2068,11 @@ function CureSafeWait()
 
         CureSleep(0.22)
     end
+end
+
+-- Alias for compatibility with scripts that use CureCharacterSafeWait
+function CureCharacterSafeWait()
+    return CureSafeWait()
 end
 
 -- ═══════════════════════════════════════════════════════════════════════════════════════════════════════════════════
