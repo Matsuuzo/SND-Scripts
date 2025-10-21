@@ -117,6 +117,30 @@ Automates helper characters that support main character runs by managing helper 
 
 ---
 
+## Character State Tracking System
+**Persistent State File**
+- Tracks 4 data points per character:
+  1. Character/Helper name and world
+  2. Associated main character/helper
+  3. Completion status (0 = pending, 1 = completed)
+  4. Character level (for trial farming optimization)
+---
+
+## Ultimate Weapon Trial Farming Mode
+
+### Overview
+After all daily roulettes are complete but before the 17:00 reset, scripts can automatically switch to farming Ultimate Weapon trials for leveling. This mode intelligently selects the lowest-level character to maximize leveling efficiency. Resets Script on Daily Reset
+
+### Activation
+**Toggle Control**
+```lua
+local enableTrialDutyFarming = true  -- Set to false to disable
+```
+- Set to `true`: Activates trial farming after roulettes complete
+- Set to `false`: Uses AR Multi mode instead (original behavior)
+
+---
+
 ## Configuration Requirements
 
 ### Required Plugins
@@ -127,8 +151,11 @@ Automates helper characters that support main character runs by managing helper 
 - **BossMod (Veyn)** - Combat mechanics handling
 - **vnav** - Navigation and pathfinding
 - **BardToolbox (BTB)** - Party management and invites
-- **xafunc.lua** - Functions from XA
-- **dfunc.lua** - Function from McVaxius 
+
+### Required Script Files
+Download from: https://github.com/MacaronDream/SND-Scripts/tree/main/SND
+- **curefunc.lua** - Core utility functions
+- **character_state.lua** - Character state persistence and tracking 
 
 ### Configuration Files
 Both scripts require character/helper configuration at the top of the file:
@@ -165,11 +192,11 @@ This is an ongoing project with planned additions:
 
 ## Version Information
 
-- **Inviting Character **: v1.2.1
-- **Roulette Helper **: v1.0.19
-- **Static Helper Char**: v1.0
-- **Inviting Character - 4 Character Version** v1.3.0
-- **Last Updated**: 2025-10-12
+- **Inviting Character (WITH CHARACTER STATE)**: v2.0.0
+- **Roulette Helper (WITH CHARACTER STATE)**: v2.0.0
+- **character_state.lua**: v1.0.0
+- **Last Updated**: 2025-10-21
+- **New Features**: Character state tracking, level tracking, Ultimate Weapon trial farming
 
 ---
 
