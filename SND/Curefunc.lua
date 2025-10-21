@@ -1765,13 +1765,28 @@ function CureWaitForLifestream()
     end
     CureEcho("Lifestream completed")
 end
+--┌─────────────────────────────────────────────────────────────────────────────────────────────────────────
+--│ CureReturnToFC()
+--│ Returns to Free Company house using Lifestream
+--│
+--│ Usage:
+--│   CureReturnToFC()  -- Teleports to FC house on Homeworld
+--└─────────────────────────────────────────────────────────────────────────────────────────────────────────
+function CureReturnToFC()
+    yield("/li fc")
+    CureSleep(1)
+    CureWaitForLifestream()
+    CureSleep(2)
+    CureSafeWait()
+    CureSleep(1)
+end
 
 --┌─────────────────────────────────────────────────────────────────────────────────────────────────────────
 --│ CureReturnToHome()
 --│ Returns to Free Company house using Lifestream
 --│
 --│ Usage:
---│   CureReturnToHome()  -- Teleports to FC house on Homeworld
+--│   CureReturnToHome()  -- Teleports to Private house on Homeworld
 --└─────────────────────────────────────────────────────────────────────────────────────────────────────────
 function CureReturnToHome()
     yield("/li home")
@@ -1927,6 +1942,139 @@ function CureWalk()
     yield("/hold W")
     CureSleep(2)
     yield("/release W")
+end
+
+--┌─────────────────────────────────────────────────────────────────────────────────────────────────────────
+--│ CureMovetoXA(valuex, valuey, valuez, stopdistance, FlyOrWalk)
+--│ Advanced movement function with automatic mounting and pathfinding
+--│
+--│ Parameters:
+--│   valuex (number) - X coordinate
+--│   valuey (number) - Y coordinate
+--│   valuez (number) - Z coordinate
+--│   stopdistance (number) - Optional, kept for backwards compatibility
+--│   FlyOrWalk (boolean) - Optional, kept for backwards compatibility
+--│
+--│ Process:
+--│   1. Executes MovingCheaterXA() for mounting and readiness
+--│   2. Initiates pathfinding with automatic fly/walk selection
+--│   3. Waits for pathfinding completion
+--│   4. Optional jump every 10 iterations if gachi_jumpy flag is set
+--│
+--│ Usage:
+--│   CureMovetoXA(-12.123, 45.454, -18.5456)  -- Navigate to coordinates
+--│   CureMovetoXA(100, 0, 200, 0.1, false)    -- With optional parameters
+--│
+--│ Dependencies:
+--│   - Requires PathfindAndMoveTo() from SND
+--│   - Requires PathIsRunning() and PathfindInProgress() from SND
+--└─────────────────────────────────────────────────────────────────────────────────────────────────────────
+function CureMovetoXA(valuex, valuey, valuez, stopdistance, FlyOrWalk)
+    -- stopdistance and FlyOrWalk are optional (kept for backwards compatibility)
+    CureSleep(0.1)
+    
+    -- Helper: wait until a condition is true or timeout (seconds)
+    local function WaitUntil(cond_fn, timeout_s, step_s)
+        timeout_s = timeout_s or 10.0
+        step_s = step_s or 0.2
+        local waited = 0.0
+        while not cond_fn() do
+            CureSleep(step_s)
+            waited = waited + step_s
+            if waited >= timeout_s then return false end
+        end
+        return true
+    end
+    
+    -- Helper: NamePlate + player + not zoning
+    local function PlayerAndUIReady()
+        local not_zoning = not (Svc and Svc.Condition and Svc.Condition[45] and Svc.Condition[27] and Svc.Condition[26])
+        return CureIsAddonReady("NamePlate")
+            and CureIsAddonVisible("NamePlate")
+            and CureIsPlayerAvailable()
+            and not_zoning
+    end
+    
+    -- Helper: Mount up if possible
+    local function MountUp()
+        if not (Player and Player.CanMount) then
+            return
+        end
+
+        while not Svc.Condition[4] do
+            CureSleep(0.1)
+            if Svc.Condition[27] then
+                CureSleep(2)
+            else
+                yield('/gaction "mount roulette"')
+                CureSleep(0.1)
+            end
+        end
+    end
+    
+    -- Helper: Navigate to flag position
+    local function DoNavFlySequence()
+        while not CureNavIsReady() do
+            CureSleep(0.33)
+        end
+
+        if CureNavIsReady() then
+            if Player and Player.CanFly then
+                yield("/vnav flyflag")
+            else
+                yield("/vnav moveflag")
+            end
+
+            while CurePathIsRunning() or CurePathfindInProgress() do
+                CureSleep(0.33)
+            end
+
+            return true
+        end
+
+        return false
+    end
+    
+    -- Main MovingCheater logic
+    CureSleep(0.5)
+
+    -- FAST PATH
+    do
+        if PlayerAndUIReady() then
+            MountUp()
+            if WaitUntil(PlayerAndUIReady, 3.0, 2) then
+                DoNavFlySequence()
+            end
+        end
+    end
+
+    -- POLL until ready, then go
+    while true do
+        if WaitUntil(PlayerAndUIReady, 10.0, 2) then
+            MountUp()
+            if WaitUntil(PlayerAndUIReady, 3.0, 2) then
+                DoNavFlySequence()
+                break
+            end
+        end
+        CureSleep(0.22)
+    end
+    
+    -- Use flight if player can fly, otherwise walk
+    PathfindAndMoveTo(valuex, valuey, valuez, Player and Player.CanFly or false)
+    
+    local countee = 0
+    while (CurePathIsRunning() or CurePathfindInProgress()) do
+        CureSleep(0.507)
+        countee = countee + 1
+        if gachi_jumpy == 1 and countee == 10 and Svc.ClientState.TerritoryType ~= 129 then
+            yield("/gaction jump")
+            countee = 0
+            CureEcho("We are REALLY still pathfinding apparently.")
+        end
+    end
+
+    CureEcho("[CureMovetoXA] Completed")
 end
 
 -- ═══════════════════════════════════════════════════════════════════════════════════════════════════════════════════
