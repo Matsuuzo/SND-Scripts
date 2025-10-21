@@ -44,14 +44,14 @@ require("curefunc")
 
 -- Load character state library
 local characterStateLoaded = pcall(function()
-    require("character_state")
+    require("character_state_func")
 end)
 
 if not characterStateLoaded or not CureCharacterState then
-    CureEcho("[CRITICAL ERROR] character_state.lua not loaded!")
-    CureEcho("[CRITICAL ERROR] Please ensure character_state.lua is loaded in the Script as a Dependencie")
+    CureEcho("[CRITICAL ERROR] character_state_func.lua not loaded!")
+    CureEcho("[CRITICAL ERROR] Please ensure character_state_func.lua is loaded in the Script as a Dependencie")
     CureEcho("[CRITICAL ERROR] Script cannot continue without character state tracking")
-    error("character_state.lua not loaded - CureCharacterState is nil")
+    error("character_state_func.lua not loaded - CureCharacterState is nil")
 end
 
 -- ===============================================
@@ -1806,3 +1806,4 @@ end
 
 CureEcho("[Helper] === HELPER AUTOMATION ENDED ===")
 CureEcho("[Helper] All runs completed or script manually stopped")
+
