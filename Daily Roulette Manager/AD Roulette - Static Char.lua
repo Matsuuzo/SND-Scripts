@@ -45,105 +45,103 @@
 --
 ----------------------------------------------------------------------------------------------------------------------------
 
-----------------------------------------------------------------------------------------------------------------------------
----- FUNCTION LIBRARY REQUIREMENTS ----
-----------------------------------------------------------------------------------------------------------------------------
--- REQUIRED LIBRARIES:
--- • dfunc - Base function library (https://github.com/McVaxius/dhogsbreakfeast/blob/main/dfunc.lua)
---   Core utility functions and game state checking
---
--- • xafunc - Extended function library (https://github.com/xa-io/ffxiv-tools/blob/main/snd/xafunc.lua)
---   Movement control, sleep functions, and plugin command wrappers
---
--- Add both libraries to SND using GitHub auto-update or manual installation
-----------------------------------------------------------------------------------------------------------------------------
-
-require("dfunc")
-require("xafunc")
-
--- ===============================================
 -- Configuration
--- ===============================================
+local dutyDelay = 3
 
-local dutyDelay = 3                    -- Seconds to wait after entering duty before starting AutoDuty
-
--- ==========================================
--- DO NOT TOUCH ANYTHING BELOW
--- ==========================================
-
--- Internal state tracking
+-- State tracking
 local wasInDuty = false
 local adRunActive = false
+local lastDeathCheck = 0
+local deathCheckInterval = 1
 
--- ===============================================
--- Death Handler Functions
--- ===============================================
+-- Helper Functions (inline, no external dependencies)
+local function Echo(msg)
+    yield("/echo " .. msg)
+end
 
+local function Sleep(seconds)
+    yield("/wait " .. seconds)
+end
+
+local function SelectYesno()
+    yield("/callback SelectYesno true 0")
+end
+
+local function StartAutoduty()
+    yield("/ad start")
+end
+
+local function StopAutoduty()
+    yield("/ad stop")
+end
+
+local function EnableBossMod()
+    yield("/vbmai on")
+end
+
+local function StopMovement()
+    yield("/vnav stop")
+    yield("/automove off")
+end
+
+-- Death Handler
 local function IsPlayerDead()
-    if Svc and Svc.Condition then
-        if type(Svc.Condition.IsDeath) == "function" then
-            local ok, res = pcall(Svc.Condition.IsDeath, Svc.Condition)
-            if ok then return res end
-        end
-        -- fallback: condition index 2
-        return Svc.Condition[2] == true
+    if not Svc or not Svc.Condition then return false end
+    if type(Svc.Condition.IsDeath) == "function" then
+        local success, result = pcall(Svc.Condition.IsDeath, Svc.Condition)
+        if success then return result end
     end
-    return false
+    return Svc.Condition[2] == true
 end
 
 local function HandleDeath()
-    EchoXA("[STATIC] Player death detected - initiating revival...")
+    Echo("[Static] === DEATH DETECTED ===")
+    Sleep(1.5)
+    SelectYesno()
+    Sleep(0.5)
     
-    -- Wait for SelectYesno dialog to appear
-    SleepXA(1.5)
-    
-    -- Click Yes on revival prompt
-    SelectYesnoXA()
-    
-    -- Wait for player to be alive again
     local attempts = 0
-    local maxAttempts = 30  -- 30 seconds timeout
-    
-    while IsPlayerDead() and attempts < maxAttempts do
-        SleepXA(1)
+    while IsPlayerDead() and attempts < 30 do
+        Sleep(1)
         attempts = attempts + 1
+        if attempts % 10 == 0 then
+            Echo("[Static] Waiting for revival... (" .. attempts .. "s)")
+        end
     end
     
-    if attempts >= maxAttempts then
-        EchoXA("[STATIC] WARNING: Revival timeout - player may still be dead")
+    if attempts >= 30 then
+        Echo("[Static] WARNING: Revival timeout")
         return false
     end
     
-    EchoXA("[STATIC] Player revived successfully")
+    Echo("[Static] Revived successfully")
+    Sleep(2)
     
-    -- Wait for character to stabilize
-    SleepXA(2)
-    
-    -- Restart AutoDuty if we were in a duty
     if adRunActive then
-        EchoXA("[STATIC] Restarting AutoDuty after death...")
-        adXA("start")
-        SleepXA(1)
+        Echo("[Static] Restarting AutoDuty...")
+        StartAutoduty()
+        Sleep(1)
     end
-    
     return true
 end
 
--- ===============================================
 -- Main Loop
--- ===============================================
-
-EchoXA("[STATIC] === DREAM AD AUTOMATION (STATIC HELPER) STARTED ===")
-EchoXA("[STATIC] Waiting for duty invites...")
+Echo("════════════════════════════════════════")
+Echo("STATIC HELPER v1.2.0 - STANDALONE")
+Echo("NO EXTERNAL DEPENDENCIES")
+Echo("════════════════════════════════════════")
+yield("/xlenableprofile BTB")
 
 while true do
-    -- Check for death
-    if IsPlayerDead() then
-        EchoXA("[STATIC] === DEATH DETECTED ===")
-        HandleDeath()
+    local currentTime = os.time()
+    
+    -- Death check
+    if currentTime - lastDeathCheck >= deathCheckInterval then
+        lastDeathCheck = currentTime
+        if IsPlayerDead() then HandleDeath() end
     end
     
-    -- Check duty status
+    -- Duty status
     local inDuty = false
     if Player ~= nil and Player.IsInDuty ~= nil then
         if type(Player.IsInDuty) == "function" then
@@ -153,34 +151,32 @@ while true do
         end
     end
 
-    -- Handle duty state changes
+    -- Duty state changes
     if inDuty and not wasInDuty then
-        EchoXA("[STATIC] === ENTERED DUTY ===")
-        SleepXA(dutyDelay)
+        Echo("[Static] === ENTERED DUTY ===")
+        wasInDuty = true
+        Sleep(dutyDelay)
         
-        -- Start AutoDuty if not already active
         if not adRunActive then
-            adXA("start")
+            StartAutoduty()
             adRunActive = true
-            EchoXA("[STATIC] AutoDuty started")
+            Echo("[Static] AutoDuty started")
+            Sleep(1)
         end
         
-        -- Enable combat modules and stop movement
-        vbmaiXA("on")
-        SleepXA(3)
-        FullStopMovementXA()
-        EchoXA("[STATIC] Movement stopped and combat modules activated")
+        EnableBossMod()
+        Sleep(3)
+        StopMovement()
+        Echo("[Static] Combat modules activated")
         
     elseif not inDuty and wasInDuty then
-        EchoXA("[STATIC] === LEFT DUTY ===")
+        Echo("[Static] === LEFT DUTY ===")
+        wasInDuty = false
         adRunActive = false
-        SleepXA(1)
-        adXA("stop")
-        EchoXA("[STATIC] AutoDuty stopped - waiting for next duty invite")
+        Sleep(1)
+        StopAutoduty()
+        Echo("[Static] AutoDuty stopped")
     end
     
-    wasInDuty = inDuty
-    SleepXA(1)
+    Sleep(1)
 end
-
-EchoXA("[STATIC] === DREAM AD AUTOMATION (STATIC HELPER) ENDED ===")
