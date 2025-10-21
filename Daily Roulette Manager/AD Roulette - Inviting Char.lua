@@ -24,10 +24,9 @@
 -- Advanced multi-character AD roulette automation script with intelligent party management and DC travel.
 -- Automatically handles character rotation, DC travel, duty roulette queuing, and multi-helper verification.
 --
--- Version: 1.3.0
--- Last Updated: 2025-10-12
--- Added: Improved daily reset handling with midnight flag reset
--- Added: Death handler with automatic revival and AutoDuty restart
+-- Version: 1.4.0 - WITH CHARACTER STATE TRACKING
+-- Last Updated: 2025-10-19
+-- Added: Character state persistence, teleport to inn, death handler fixes
 
 ----------------------------------------------------------------------------------------------------------------------------
 ---- PLUGIN REQUIREMENTS ----
@@ -45,6 +44,7 @@
 -- Dalamud Profile called "BTB" only using BardToolBox
 
 require("curefunc")
+require("character_state")
 
 -- ===============================================
 -- Configuration
@@ -52,14 +52,14 @@ require("curefunc")
 
 -- Character list with assigned rotating helper - Format: {"Inviting Char@World", "Helper Name"}
 local charConfigs = {
-{{"Inviting CharOne@World"}, "Helper One"},
-{{"Inviting CharTwo@World"}, "Helper Two"},
-{{"Inviting CharThee@World"}, "Helper Three"} 
+{{"Inviting One@World",} "Helper Name"},
+{{"Inviting Two@World",} ""},
+{{"Inviting Three@World",} "Helper Name"}
 }
 
 -- DC Travel Configuration
 local enableDCTravel = true                    -- Toggle: Enable/Disable DC Travel feature
-local dcTravelWorld = "Omega"              -- Target world for DC travel
+local dcTravelWorld = "World"              -- Target world for DC travel
 
 -- Duty Roulette ID (1 = Leveling Roulette,2 = High-Level Dungeons, 3 = Main Scenario, 5 = Expert, 8 = Level Cap Dungeons )
 local dutyRouletteID = 1
@@ -89,6 +89,16 @@ local lastMidnightCheck = 0
 local midnightCheckInterval = 60             -- Check for midnight every 60 seconds
 local allCharactersCompleted = false         -- Track if all characters are done
 
+-- Trial Duty Farming Configuration
+local enableTrialDutyFarming = false           -- Toggle: Enable/Disable Trial Duty Farming
+local trialDutyMode = false                   -- Trial duty farming mode active
+local trialDutyInProgress = false             -- Currently in trial duty
+local lastTrialDutyCheck = 0
+local trialDutyCheckInterval = 5              -- Check duty status every 5 seconds
+local trialPartyFormationAttempts = 0
+local lastPartyFormationTime = 0
+local trialPartyFormationTimeout = 60         -- Timeout for party formation
+
 -- ==========================================
 -- DO NOT TOUCH ANYTHING BELOW
 -- ==========================================
@@ -116,6 +126,7 @@ local adRunActive = false
 local failedCharacters = {}
 local completedCharacters = {}
 local dcTravelCompleted = false               -- Track if DC travel has been done for current character
+local characterState = {}                     -- Character state tracking (loaded at startup)
 
 -- ===============================================
 -- Death Handler Functions
@@ -161,11 +172,24 @@ local function HandleDeath()
     -- Wait for character to stabilize
     CureSleep(2)
     
-    -- Restart AutoDuty if we were in a duty
-    if adRunActive then
+    -- Check if we're still in a duty before restarting AutoDuty
+    local inDuty = false
+    if Player ~= nil and Player.IsInDuty ~= nil then
+        if type(Player.IsInDuty) == "function" then
+            inDuty = Player.IsInDuty()
+        else
+            inDuty = Player.IsInDuty
+        end
+    end
+    
+    -- Restart AutoDuty only if we're actually in a duty
+    if inDuty and adRunActive then
         CureEcho("[Death] Restarting AutoDuty after death...")
         CureAd("start")
         CureSleep(1)
+        CureEcho("[Death] AutoDuty restarted successfully")
+    elseif not inDuty then
+        CureEcho("[Death] Not in duty - skipping AutoDuty restart")
     end
     
     return true
@@ -346,6 +370,17 @@ local function ResetRotation()
     -- Clear all completion and failure tracking
     failedCharacters = {}
     completedCharacters = {}
+    
+    -- ═══════════════════════════════════════════════════════════════
+    -- CHARACTER STATE INTEGRATION POINT 3: Reset File State
+    -- ═══════════════════════════════════════════════════════════════
+    local confirmReset = function()
+        CureEcho("[DailyReset] Confirming character state reset...")
+        return true  -- Auto-confirm
+    end
+    
+    CureCharacterState.ResetAll(characterState, confirmReset)
+    CureEcho("[CharState] ✓ All characters reset in file to status 0")
     
     -- Reset flags
     allCharactersCompleted = false
@@ -567,6 +602,68 @@ local function CheckSubmarineReloginComplete()
 end
 
 -- ===============================================
+-- Trial Duty Farming Functions
+-- ===============================================
+
+local function CheckTrialDutyStatus()
+    local currentTime = os.time()
+    if currentTime - lastTrialDutyCheck < trialDutyCheckInterval then
+        return
+    end
+    
+    lastTrialDutyCheck = currentTime
+    
+    local inDuty = false
+    if Player ~= nil and Player.IsInDuty ~= nil then
+        if type(Player.IsInDuty) == "function" then
+            inDuty = Player.IsInDuty()
+        else
+            inDuty = Player.IsInDuty
+        end
+    end
+    
+    -- Duty entry detected
+    if inDuty and not trialDutyInProgress then
+        CureEcho("[TrialDuty] === ENTERED TRIAL DUTY ===")
+        CureAd("stop")
+        CureSleep(1)
+        CureAd("start")
+        trialDutyInProgress = true
+    end
+    
+    -- Duty exit detected
+    if not inDuty and trialDutyInProgress then
+        CureEcho("[TrialDuty] === EXITED TRIAL DUTY ===")
+        CureAd("stop")
+        trialDutyInProgress = false
+    end
+end
+
+local function OnTrialDutyExit()
+    CureEcho("[TrialDuty] === TRIAL DUTY COMPLETE ===")
+    CureAd("stop")
+    CureSleep(1)
+    
+    -- Disband party
+    CureBTBDisband()
+    CureSleep(2)
+    
+    -- Log character level for tracking
+    local actualCharName = GetCurrentCharacterName()
+    if actualCharName and characterState then
+        CureCharacterState.LogCharacterLevelForDuty(characterState, actualCharName)
+    end
+end
+
+local function GetCurrentCharacterName()
+    if Player and Player.Entity and Player.Entity.Name then
+        local fullName = tostring(Player.Entity.Name)
+        return fullName
+    end
+    return nil
+end
+
+-- ===============================================
 -- Duty Roulette Check Functions
 -- ===============================================
 
@@ -574,7 +671,7 @@ local function CheckDutyRouletteReward()
     CureEcho("[RouletteCheck] === CHECKING DUTY ROULETTE REWARD STATUS ===")
     
     yield("/dutyfinder")
-    CureSleep(2)
+    CureSleep(10)
     
     yield("/callback ContentsFinder true 2 2 0")
     CureSleep(1)
@@ -636,8 +733,8 @@ local function PerformDCTravel()
         CureEcho("[DCTravel] Already on target world - skipping travel")
         dcTravelCompleted = true
         
-        CureEcho("[DCTravel] Teleporting to Horizon...")
-        yield("/li Horizon")
+        CureEcho("[DCTravel] Teleporting to inn...")
+        yield("/li inn")
         CureSleep(10)
         
         return true
@@ -652,8 +749,8 @@ local function PerformDCTravel()
     CureEcho("[DCTravel] === DATA CENTER TRAVEL COMPLETE ===")
     CureEcho("[DCTravel] Now on world: " .. dcTravelWorld)
     
-    CureEcho("[DCTravel] Teleporting to Horizon...")
-    yield("/li Horizon")
+    CureEcho("[DCTravel] Teleporting to inn...")
+    yield("/li inn")
     CureSleep(10)
     
     dcTravelCompleted = true
@@ -668,7 +765,8 @@ local function ReturnToHomeworld()
     
     CureEcho("[DCTravel] === RETURNING TO HOMEWORLD ===")
     
-    CureReturnToHomeworld()
+    -- CRITICAL: Use CureReturnToHome() for reliability (has built-in verification)
+    CureReturnToHome()
     
     CureEcho("[DCTravel] === HOMEWORLD RETURN COMPLETE ===")
     return true
@@ -874,6 +972,28 @@ local function InitializeCharacter()
     CureEcho("[RelogAuto] Character: " .. charConfigs[idx][1][1])
     CureEcho("[RelogAuto] Required Helper: " .. currentHelper)
     
+    -- ═══════════════════════════════════════════════════════════════
+    -- CHARACTER STATE INTEGRATION POINT 4: Check File Before UI
+    -- ═══════════════════════════════════════════════════════════════
+    -- Check file state first (faster than UI check)
+    if characterState and type(characterState) == "table" then
+        local charName = charConfigs[idx][1][1]
+        for _, entry in ipairs(characterState) do
+            if entry[1] and entry[1][1] and tostring(entry[1][1]):lower() == tostring(charName):lower() then
+                if entry[3] == 1 then  -- Already completed in file
+                    CureEcho("[CharState] *** FILE SHOWS REWARD ALREADY RECEIVED - SKIPPING CHARACTER ***")
+                    local actualCharName = charConfigs[idx][1][1]
+                    completedCharacters[actualCharName] = true
+                    CureEcho("[RelogAuto] === CHARACTER INITIALIZATION ABORTED (COMPLETED IN FILE) ===")
+                    return false
+                end
+                break
+            end
+        end
+    else
+        CureEcho("[CharState] WARNING: Character state not loaded - skipping file check")
+    end
+    
     -- Step 1: Check if Duty Roulette reward already received
     CureEcho("[RelogAuto] Step 1: Checking Duty Roulette reward status...")
     local checkSuccess, rewardStatus = CheckDutyRouletteReward()
@@ -890,6 +1010,13 @@ local function InitializeCharacter()
         CureEcho("[RelogAuto] *** REWARD ALREADY RECEIVED - SKIPPING CHARACTER ***")
         local actualCharName = charConfigs[idx][1][1]
         completedCharacters[actualCharName] = true
+        
+        -- Update character state file
+        if characterState and type(characterState) == "table" then
+            CureCharacterState.UpdateStatus(characterState, actualCharName, 1)
+            CureEcho("[CharState] ✓ Persisted completion to file (detected in Step 1)")
+        end
+        
         CureEcho("[RelogAuto] === CHARACTER INITIALIZATION ABORTED (COMPLETED) ===")
         return false
     end
@@ -934,6 +1061,54 @@ end
 -- ===============================================
 -- Initialize rotation
 -- ===============================================
+
+-- ═══════════════════════════════════════════════════════════════
+-- CHARACTER STATE INTEGRATION POINT 1: Load State at Startup
+-- ═══════════════════════════════════════════════════════════════
+CureEcho("[CharState] === LOADING CHARACTER STATE ===")
+characterState = CureCharacterState.Load(charConfigs)
+CureCharacterState.ValidateAndSync(characterState, charConfigs)
+CureCharacterState.Display(characterState)
+
+-- ═══════════════════════════════════════════════════════════════
+-- NEW: Check if reset already occurred today using timestamp
+-- ═══════════════════════════════════════════════════════════════
+local resetAlreadyHappened = CureCharacterState.HasResetOccurredToday(characterState, dailyResetHour)
+if resetAlreadyHappened then
+    local lastResetTime = CureCharacterState.GetLastResetTime()
+    CureEcho("[DailyReset] ✓ Reset already occurred today")
+    if lastResetTime then
+        CureEcho("[DailyReset] Last reset time: " .. lastResetTime)
+    end
+    dailyResetTriggered = true  -- Mark as already triggered so it won't trigger again
+    CureEcho("[DailyReset] dailyResetTriggered set to TRUE (prevents duplicate reset)")
+    
+    -- Mark any file-tracked completed characters as already done (prevent re-running)
+    for _, entry in ipairs(characterState) do
+        if entry[3] == 1 then  -- Status = 1 means completed
+            local charName = tostring(entry[1][1])
+            completedCharacters[charName] = true
+            CureEcho("[CharState] Pre-loaded from file: " .. charName .. " already completed today")
+        end
+    end
+else
+    CureEcho("[DailyReset] Reset has NOT occurred yet today")
+    CureEcho("[DailyReset] === PERFORMING IMMEDIATE RESET ===")
+    
+    -- Reset character state immediately
+    local confirmReset = function()
+        CureEcho("[DailyReset] Auto-confirming reset on startup...")
+        return true
+    end
+    
+    CureCharacterState.ResetAll(characterState, confirmReset)
+    CureEcho("[CharState] All characters reset to status 0")
+    
+    dailyResetTriggered = false
+    CureEcho("[DailyReset] dailyResetTriggered set to FALSE (reset will trigger at " .. dailyResetHour .. ":00)")
+end
+
+CureEcho("[CharState] === CHARACTER STATE LOADED ===")
 
 idx = getCharIndex(currentChar)
 if not idx then
@@ -1020,8 +1195,127 @@ while rotationStarted do
         CheckMidnight()
     end
     
+    -- === TRIAL DUTY FARMING MODE (when all characters completed but no reset yet) ===
+    if allCharactersCompleted and not dailyResetTriggered and enableTrialDutyFarming then
+        if not trialDutyMode then
+            CureEcho("[TrialDuty] === ACTIVATING TRIAL DUTY FARMING MODE ===")
+            CureEcho("[TrialDuty] All roulettes completed, farming trials until " .. dailyResetHour .. ":00 reset")
+            trialDutyMode = true
+            
+            -- Disable AR Multi if active
+            CureDisableARMulti()
+            CureSleep(2)
+        end
+        
+        if trialDutyMode then
+            -- Get lowest level character
+            local lowestChar = CureCharacterState.GetLowestLevelCharacter(characterState)
+            
+            if not lowestChar then
+                CureEcho("[TrialDuty] ERROR: No characters available for trial farming")
+                CureSleep(10)
+                goto continue_loop
+            end
+            
+            CureEcho("[TrialDuty] === STARTING TRIAL RUN ===")
+            CureEcho("[TrialDuty] Selected: " .. lowestChar.characterName .. " (Level " .. lowestChar.level .. ")")
+            
+            -- Login as lowest level character
+            if not CureARRelog(lowestChar.characterName) then
+                CureEcho("[TrialDuty] ERROR: Failed to login as " .. lowestChar.characterName)
+                CureSleep(10)
+                goto continue_loop
+            end
+            
+            CureCharacterSafeWait()
+            CureEnableTextAdvance()
+            CureSleep(2)
+            
+            -- Update character level
+            CureCharacterState.UpdateCharacterLevel(characterState, lowestChar.characterName)
+            
+            -- Perform DC travel
+            CureEcho("[TrialDuty] Performing DC Travel...")
+            dcTravelCompleted = false
+            PerformDCTravel()
+            CureCharacterSafeWait()
+            
+            -- Form 4-person party
+            CureEcho("[TrialDuty] Forming 4-person party...")
+            CureEnableBTBandInvite()
+            CureSleep(5)
+            
+            -- Wait for party to form (simplified - just wait)
+            local partyWaitTime = 0
+            local maxPartyWait = trialPartyFormationTimeout
+            
+            while partyWaitTime < maxPartyWait do
+                local partySize = Svc.Party.Length
+                if partySize >= 4 then
+                    CureEcho("[TrialDuty] Party formed with " .. partySize .. " members")
+                    break
+                end
+                CureSleep(5)
+                partyWaitTime = partyWaitTime + 5
+            end
+            
+            -- Start trial duty
+            CureEcho("[TrialDuty] Starting trial duty 1048...")
+            yield("/ad run trial 1048 1")
+            CureSleep(5)
+            
+            -- Monitor duty status
+            local dutyWaitTime = 0
+            local maxDutyWait = 1800  -- 30 minutes max
+            
+            while dutyWaitTime < maxDutyWait do
+                CheckTrialDutyStatus()
+                
+                -- Check if duty completed
+                if not trialDutyInProgress and dutyWaitTime > 10 then
+                    -- Duty finished
+                    OnTrialDutyExit()
+                    break
+                end
+                
+                CureSleep(5)
+                dutyWaitTime = dutyWaitTime + 5
+            end
+            
+            -- Check for submarines
+            CureEcho("[TrialDuty] Checking for submarines...")
+            local subsReady = CheckSubmarines()
+            
+            if subsReady then
+                CureEcho("[TrialDuty] Submarines available - returning to FC...")
+                CureReturnToFC()
+                CureSleep(5)
+                
+                -- Enable AR Multi for submarines
+                CureEnableARMulti()
+                CureSleep(5)
+                
+                -- Wait for submarines to complete (simplified)
+                CureEcho("[TrialDuty] Waiting for submarines to complete...")
+                CureSleep(60)
+                
+                -- Disable AR Multi
+                CureDisableARMulti()
+                CureSleep(2)
+                
+                -- Loop will repeat with next lowest level character
+            else
+                CureEcho("[TrialDuty] No submarines - retrying party formation...")
+                CureSleep(4)
+                -- Loop will retry party formation
+            end
+            
+            goto continue_loop
+        end
+    end
+    
     -- === DAILY RESET CHECK (when all characters are done and waiting) ===
-    if allCharactersCompleted then
+    if allCharactersCompleted and not trialDutyMode then
         if currentTime - lastDailyResetCheck >= dailyResetCheckInterval then
             lastDailyResetCheck = currentTime
             
@@ -1033,7 +1327,12 @@ while rotationStarted do
                 CureSleep(2)
                 
                 if ResetRotation() then
+                    -- Reload character state after reset
+                    characterState = CureCharacterState.Load(charConfigs)
+                    CureCharacterState.Display(characterState)
+                    
                     allCharactersCompleted = false
+                    trialDutyMode = false  -- Exit trial mode
                     
                     local initSuccess = InitializeCharacter()
                     
@@ -1086,6 +1385,11 @@ while rotationStarted do
         
     elseif not inDuty and wasInDuty then
         CureEcho("[RelogAuto] === LEFT DUTY ===")
+        
+        -- CRITICAL FIX: Reset wasInDuty flag IMMEDIATELY to allow proper retry
+        wasInDuty = false
+        CureEcho("[RelogAuto] Flag reset: wasInDuty = false")
+        
         adRunActive = false
         CureSleep(1)
         CureAd("stop")
@@ -1098,6 +1402,10 @@ while rotationStarted do
         CureEcho("[RelogAuto] Returning to homeworld...")
         ReturnToHomeworld()
         CureSleep(2)
+        
+        -- CRITICAL FIX: Reset dcTravelCompleted flag AFTER homeworld return to allow retry
+        dcTravelCompleted = false
+        CureEcho("[RelogAuto] Flag reset: dcTravelCompleted = false (retry enabled)")
         
         -- === CHECK FOR DAILY RESET AFTER DUTY ===
         if CheckDailyReset() and not dailyResetTriggered then
@@ -1116,6 +1424,10 @@ while rotationStarted do
             end
             
             if ResetRotation() then
+                -- Reload character state after reset
+                characterState = CureCharacterState.Load(charConfigs)
+                CureCharacterState.Display(characterState)
+                
                 allCharactersCompleted = false
                 
                 local initSuccess = InitializeCharacter()
@@ -1146,6 +1458,11 @@ while rotationStarted do
         elseif rewardStatus == "available" then
             CureEcho("[RelogAuto] ⚠ WARNING: DUTY INCOMPLETE - REWARD NOT RECEIVED!")
             CureEcho("[RelogAuto] Character got stuck or duty failed - retrying...")
+            
+            -- CRITICAL FIX: Re-perform DC travel before retry (flags were reset)
+            CureEcho("[RelogAuto] Re-performing DC Travel for retry...")
+            PerformDCTravel()
+            CureCharacterSafeWait()
             
             -- Don't mark as completed, retry the duty
             CureEcho("[RelogAuto] Re-enabling BTB and sending party invite...")
@@ -1195,6 +1512,21 @@ while rotationStarted do
         if not completedCharacters[actualCharName] then
             completedCharacters[actualCharName] = true
             CureEcho("[RelogAuto] Character " .. actualCharName .. " marked as completed")
+            
+            -- ═══════════════════════════════════════════════════════════════
+            -- CHARACTER STATE INTEGRATION POINT 2: Persist to File
+            -- ═══════════════════════════════════════════════════════════════
+            if characterState and type(characterState) == "table" then
+                -- Update character level
+                CureCharacterState.UpdateCharacterLevel(characterState, actualCharName)
+                
+                -- Update completion status
+                CureCharacterState.UpdateStatus(characterState, actualCharName, 1)
+                CureEcho("[CharState] ✓ Persisted completion to file")
+                
+                -- Log character level for tracking
+                CureCharacterState.LogCharacterLevelForDuty(characterState, actualCharName)
+            end
         end
         
         -- === SUBMARINE CHECK POINT ===
@@ -1238,7 +1570,10 @@ while rotationStarted do
         end
     end
     
-    wasInDuty = inDuty
+    -- Update wasInDuty flag (only if not already reset during duty exit)
+    if inDuty and not wasInDuty then
+        wasInDuty = true
+    end
     
     -- === SUBMARINE BACKGROUND MONITORING ===
     if submarinesPaused then
