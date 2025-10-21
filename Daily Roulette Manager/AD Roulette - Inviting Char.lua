@@ -44,7 +44,17 @@
 -- Dalamud Profile called "BTB" only using BardToolBox
 
 require("curefunc")
-require("character_state")
+-- Load character state library
+local characterStateLoaded = pcall(function()
+    require("character_state")
+end)
+
+if not characterStateLoaded or not CureCharacterState then
+    CureEcho("[CRITICAL ERROR] character_state.lua not loaded!")
+    CureEcho("[CRITICAL ERROR] Please ensure character_state.lua is loaded in the Script as a Dependencie")
+    CureEcho("[CRITICAL ERROR] Script cannot continue without character state tracking")
+    error("character_state.lua not loaded - CureCharacterState is nil")
+end
 
 -- ===============================================
 -- Configuration
@@ -1646,3 +1656,4 @@ end
 CureEcho("[RelogAuto] === AD RELOG AUTOMATION ENDED ===")
 
 CureEcho("[RelogAuto] All characters processed or script manually stopped")
+
