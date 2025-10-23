@@ -1932,6 +1932,25 @@ function CurePeriodicMovementCheck(lastMovementCheck, movementCheckInterval, inD
 end
 
 --┌─────────────────────────────────────────────────────────────────────────────────────────────────────────
+--│ CurePathfindAndMoveTo()
+--│ Moves you to the x, y, z coordinates
+--|
+--│ Parameters:
+--│   valuex (number) - X coordinate
+--│   valuey (number) - Y coordinate
+--│   valuez (number) - Z coordinate
+--|
+--│ Usage:
+--│   CurePathfindAndMoveTo() - Navigate to Coordinates
+--└─────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+function CurePathfindAndMoveTo(x, y, z, tralse)
+	import ("System.Numerics")
+	Coordinates = Vector3(x, y, z)
+	IPC.vnavmesh.PathfindAndMoveTo(Coordinates, tralse)
+end
+
+--┌─────────────────────────────────────────────────────────────────────────────────────────────────────────
 --│ CureWalk()
 --│ Walks forward for 2 seconds
 --│
@@ -2061,7 +2080,7 @@ function CureMovetoXA(valuex, valuey, valuez, stopdistance, FlyOrWalk)
     end
     
     -- Use flight if player can fly, otherwise walk
-    PathfindAndMoveTo(valuex, valuey, valuez, Player and Player.CanFly or false)
+    CurePathfindAndMoveTo(valuex, valuey, valuez, Player and Player.CanFly or false)
     
     local countee = 0
     while (CurePathIsRunning() or CurePathfindInProgress()) do
