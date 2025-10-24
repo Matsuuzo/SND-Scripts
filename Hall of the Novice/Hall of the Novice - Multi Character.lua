@@ -1,0 +1,282 @@
+-- Hall of the Novice DPS - Multi Character Version
+-- Be sure to have turned off Dungeon Auto Leave in CBT otherwise you won't get the Ring at the End!!!
+--
+--Requirements:
+-- vnav
+-- Textadvance
+-- Yesalready (Set to Accept Dutyfinder Invites)
+-- AutoRetainer (for character switching)
+
+require("curefunc")
+
+-- =========================
+-- CHARACTER CONFIGURATION
+-- =========================
+-- Add your characters here in format: {{"CharacterName@World"}}
+-- Example: {{"John Doe@Omega"}}, {{"Jane Smith@Phoenix"}}
+local charConfigs = {
+    {{"Your Character1@World"}},
+    {{"Your Character2@World"}},
+    -- Add more characters as needed
+}
+
+-- =========================
+-- INITIALIZATION
+-- =========================
+CureEcho("════════════════════════════════════════")
+CureEcho("HALL OF THE NOVICE - MULTI CHARACTER")
+CureEcho("════════════════════════════════════════")
+
+-- Initialize rotation
+local ok, idx, currentChar, currentHelper, failedChars, completedChars, err = 
+    CureInitializeRotation(charConfigs)
+
+if not ok then
+    CureEcho("❌ Initialization failed: " .. err)
+    return
+end
+
+CureEcho("✓ Starting with character: " .. currentChar)
+CureEcho("Total characters in rotation: " .. #charConfigs)
+
+-- =========================
+-- MAIN CHARACTER LOOP
+-- =========================
+while true do
+    CureEcho("════════════════════════════════════════")
+    CureEcho("Starting Hall of the Novice for: " .. currentChar)
+    CureEcho("════════════════════════════════════════")
+    
+    -- =========================
+    -- Main Script (DO NOT MODIFY)
+    -- =========================
+    yield("/at y")
+    yield("/actionlist")
+    CureSleep(1)
+    CureCallback("ActionMenu true 5 1")
+    CureSleep(1)
+    CureCallback("ActionMenu true 3 Undefined Undefined 100663366")
+    CureSleep(1)
+    CureCallback("BeginnersMansionProblem true 0")
+    CureSleep(35)
+    yield("/actionlist")
+    CureMovetoXA(-2.0952129364014, 0.99999976158142, 0.045029509812593)
+    CureSleep(45)
+    CureMovetoXA(-18.14331817627, 1.0, 0.12497842311859)
+    CureSleep(5)
+    CureMovetoXA(-9.8412790298462, 0.9999897480011, 9.8200950622559)
+    CureSleep(48)
+    CureMovetoXA(0.073154702782631, 1.0, -0.020357802510262)
+    CureSleep(15)
+    CureMovetoXA(-7.925820350647, 1.0, 0.71448481082916)
+    CureSleep(48)
+    CureMovetoXA(-3.6253387928009, 0.99999403953552, -18.346921920776)
+    CureSleep(30)
+    CureMovetoXA(-14.98469543457, 1.0, 0.18082205951214)
+    CureSleep(43)
+    CureMovetoXA(-14.780518531799, 0.99999570846558, -9.8525199890137)
+    CureSleep(1)
+    CureMovetoXA(-11.690210342407, 1.0, -13.392968177795)
+    CureSleep(1)
+    CureMovetoXA(-5.5583820343018, 0.99999785423279, -16.353952407837)
+    CureMovetoXA(0.71394073963165, 1.0, -17.18726348877)
+    CureMovetoXA(7.1512498855591, 1.0, -15.870170593262)
+    CureMovetoXA(13.867092132568, 0.9999988079071, -11.825524330139)
+    CureSleep(1)
+    CureMovetoXA(19.005107879639, 0.99999976158142, -0.031151205301285)
+    CureSleep(3)
+    CureTarget("Master of Trials")
+    CureSleep(1)
+    CureInteract()
+    CureSleep(2)
+    CureCallback("SelectString true 0")
+    CureSleep(1)
+    CureCallback("SelectYesno true 0")
+    CureSleep(5)
+    CureMovetoXA(-2.5160489082336, 0.99999976158142, 0.50334388017654)
+    CureSleep(34)
+    CureMovetoXA(-9.2096872329712, 1.0, -0.21516799926758)
+    CureMovetoXA(-15.581594467163, 1.0, -0.11850534379482)
+    CureSleep(15)
+    CureMovetoXA(3.4238305091858, 1.0, 15.030114173889)
+    CureSleep(21.5)
+    CureMovetoXA(-14.780518531799, 0.99999570846558, -9.8525199890137)
+    CureSleep(3)
+    CureMovetoXA(-11.690210342407, 1.0, -13.392968177795)
+    CureMovetoXA(-5.5583820343018, 0.99999785423279, -16.353952407837)
+    CureMovetoXA(0.71394073963165, 1.0, -17.18726348877)
+    CureMovetoXA(7.1512498855591, 1.0, -15.870170593262)
+    CureMovetoXA(13.867092132568, 0.9999988079071, -11.825524330139)
+    CureSleep(1)
+    CureMovetoXA(19.005107879639, 0.99999976158142, -0.031151205301285)
+    CureSleep(3)
+    CureTarget("Master of Trials")
+    CureInteract()
+    CureSleep(20)
+    yield("/actionlist")
+    CureSleep(1)
+    CureCallback("ActionMenu true 5 1")
+    CureSleep(1)
+    CureCallback("ActionMenu true 3 Undefined Undefined 100663366")
+    CureSleep(1)
+    CureCallback("BeginnersMansionProblem true 0")
+    CureSleep(35)
+    yield("/actionlist")
+    CureMovetoXA(-10.398652076721, 0.9999840259552, 10.991465568542)
+    CureSleep(5)
+    CureMovetoXA(-1.1110429763794, 1.0, 0.83526182174683)
+    CureSleep(8)
+    CureMovetoXA(-2.1986041069031, 1.0, 1.5107163190842)
+    CureSleep(7)
+    CureMovetoXA(-3.7242636680603, 1.0, 4.3430151939392)
+    CureSleep(10)
+    CureMovetoXA(-3.4054780006409, 0.9999840259552, -0.49051353335381)
+    CureSleep(8)
+    CureMovetoXA(-18.441604614258, 1.0, 6.1250152587891)
+    CureSleep(15)
+    CureMovetoXA(-9.522647857666, 0.99998950958252, 10.107487678528)
+    CureSleep(10)
+    CureMovetoXA(-4.7374234199524, 1.0, 4.6600604057312)
+    CureSleep(12)
+    CureMovetoXA(-12.668210029602, 1.0, 3.6543674468994)
+    CureSleep(8)
+    CureMovetoXA(0.71659004688263, 0.99999976158142, 2.8462359905243)
+    CureSleep(25)
+    CureMovetoXA(19.005107879639, 0.99999976158142, -0.031151205301285)
+    CureSleep(3)
+    CureTarget("Master of Trials")
+    CureInteract()
+    CureSleep(2)
+    CureCallback("SelectString true 0")
+    CureSleep(1)
+    CureCallback("SelectYesno true 0")
+    CureSleep(5)
+    CureMovetoXA(-3.2473313808441, 1.0, 2.4608235359192)
+    CureSleep(5)
+    CureMovetoXA(1.0681728124619, 1.0, 0.89767748117447)
+    CureSleep(6)
+    CureMovetoXA(7.3232412338257, 1.0, 3.4455502033234)
+    CureSleep(14)
+    CureMovetoXA(-3.0997540950775, 1.0, 5.8680610656738)
+    CureSleep(5)
+    CureMovetoXA(-18.905187606812, 0.99999976158142, -0.81685042381287)
+    CureSleep(15)
+    CureMovetoXA(0.57858610153198, 1.0, 4.3764452934265)
+    CureSleep(5)
+    CureMovetoXA(-2.0251812934875, 1.0, 4.4376015663147)
+    CureSleep(10)
+    CureMovetoXA(19.005107879639, 0.99999976158142, -0.031151205301285)
+    CureSleep(3)
+    CureTarget("Master of Trials")
+    CureInteract()
+    CureSleep(20)
+    yield("/actionlist")
+    CureSleep(1)
+    CureCallback("ActionMenu true 5 1")
+    CureSleep(1)
+    CureCallback("ActionMenu true 3 Undefined Undefined 100663366")
+    CureSleep(1)
+    CureCallback("BeginnersMansionProblem true 0")
+    CureSleep(35)
+    yield("/actionlist")
+    CureMovetoXA(-4.7332215309143, 1.0, 0.14285482466221)
+    CureSleep(5)
+    CureMovetoXA(-19.281618118286, 1.0, 0.091411150991917)
+    CureSleep(6)
+    CureMovetoXA(-4.8265662193298, 0.9999840259552, -8.2452669143677)
+    CureSleep(8)
+    CureMovetoXA(-0.89255923032761, 1.0, 0.51982355117798)
+    CureSleep(7)
+    CureMovetoXA(-4.5744700431824, 0.9999840259552, -4.8887076377869)
+    CureSleep(8)
+    CureMovetoXA(-12.546802520752, 1.0, -11.340044975281)
+    CureSleep(8)
+    CureMovetoXA(-12.732039451599, 1.0, 0.60576665401459)
+    CureSleep(10)
+    CureMovetoXA(0.050701335072517, 1.0, 0.082827225327492)
+    CureSleep(12)
+    CureMovetoXA(19.005107879639, 0.99999976158142, -0.031151205301285)
+    CureSleep(3)
+    CureTarget("Master of Trials")
+    CureSleep(0.3)
+    CureInteract()
+    CureSleep(2)
+    CureCallback("SelectString true 0")
+    CureSleep(1)
+    CureCallback("SelectYesno true 0")
+    CureSleep(5)
+    CureMovetoXA(-5.0693197250366, 1.0, 0.068568393588066)
+    CureSleep(5)
+    CureMovetoXA(-13.071772575378, 1.0, -10.446235656738)
+    CureSleep(3)
+    CureMovetoXA(-17.312995910645, 1.0, -0.10262574255466)
+    CureSleep(4)
+    CureMovetoXA(-8.8732814788818, 1.0, -9.1185121536255)
+    CureSleep(10)
+    CureMovetoXA(-1.9915025234222, 0.9999840259552, -1.6220409870148)
+    CureSleep(5)
+    CureMovetoXA(-9.0257863998413, 1.0, -6.9589786529541)
+    CureSleep(7.3)
+    yield("/vnav moveto -3.8237311840057 0.99998545646667 -2.4619505405426")
+    CureSleep(1)
+    yield("/vnav moveto -6.6984143257141 0.99999070167542 -4.9446077346802")
+    CureSleep(15)
+    CureMovetoXA(-13.87654209137, 1.0, -11.575351715088)
+    CureSleep(8)
+    CureMovetoXA(19.005107879639, 0.99999976158142, -0.031151205301285)
+    CureSleep(2)
+    CureTarget("Master of Trials")
+    CureSleep(1)
+    CureInteract()
+    CureSleep(8)
+    
+    -- =========================
+    -- End of Main Script
+    -- =========================
+    
+    CureEcho("✓ Hall of the Novice completed for: " .. currentChar)
+    
+    -- Mark character as completed
+    completedChars[currentChar] = true
+    
+    -- =========================
+    -- CHARACTER SWITCHING
+    -- =========================
+    CureEcho("════════════════════════════════════════")
+    CureEcho("Switching to next character...")
+    CureEcho("════════════════════════════════════════")
+    
+    -- Switch to next character
+    local success, newIdx, newChar, newHelper = CureSwitchToNextCharacter(
+        idx, 
+        charConfigs, 
+        failedChars, 
+        completedChars, 
+        3,  -- Max relog attempts
+        function(charName, helper)
+            -- Post-switch callback: Enable text advance for new character
+            CureEnableTextAdvance()
+            CureSleep(1)
+        end
+    )
+    
+    if not success then
+        CureEcho("════════════════════════════════════════")
+        CureEcho("🎉 ALL CHARACTERS COMPLETED!")
+        CureEcho("════════════════════════════════════════")
+        CureReportRotationStatus(charConfigs, failedChars, completedChars)
+        break
+    end
+    
+    -- Update current character info
+    idx = newIdx
+    currentChar = newChar
+    currentHelper = newHelper
+    
+    CureEcho("✓ Successfully switched to: " .. currentChar)
+    CureSleep(2)
+end
+
+CureEcho("════════════════════════════════════════")
+CureEcho("Script finished!")
+CureEcho("════════════════════════════════════════")
