@@ -7,6 +7,7 @@ Tanks and Healers are not calibrated for this. I have not tested it out on those
 ## Files
 - **Hall of the Novice.lua** - Original single-character script
 - **Hall of the Novice - Multi Character.lua** - Multi-character version with automatic character cycling
+- **HotN 1, 2, 3 DPS** - Single "Floor" Script for the DPS Tactical Excercises incase something gets stuck in the Multi Script.
 
 ## Requirements
 - **vnav** - For movement
