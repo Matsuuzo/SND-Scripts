@@ -2,6 +2,7 @@
 
 ## Overview
 This script automates the Hall of the Novice DPS training for multiple characters. It uses the existing precise timing from the original script and adds character cycling functionality using the curefunc library.
+Tanks and Healers are not calibrated for this. I have not tested it out on those Roles!!!
 
 ## Files
 - **Hall of the Novice.lua** - Original single-character script
