@@ -86,10 +86,9 @@ After completing the Hall of the Novice for one character, the script will:
 - ✓ Requires curefunc.lua and AutoRetainer
 
 ## Notes
-- The main script section is **IDENTICAL** to the original - only character cycling logic was added
-- All timing is preserved exactly as in the original script
+- The Multi script section is **IDENTICAL** to the original Single Character - only character cycling logic was added
+- All timing is preserved exactly as in the original Single Character script
 - Character cycling happens **AFTER** the main script completes
-- Failed characters are tracked and skipped in future iterations
 - The script will stop when all characters are processed
 
 ## Support
