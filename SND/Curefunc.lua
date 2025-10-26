@@ -205,7 +205,7 @@ function CureDisableARMulti()
     yield("/ays multi d")
 end
 
---┌─────────────────────────────────────────────────────────────────────────────────────────────────────────
+--┌──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
 --│ CureEnableARMulti()
 --│ Enables AutoRetainer's multi-mode
 --│
@@ -3366,6 +3366,76 @@ function CureHandleStepsOfFaithSoloDuty()
     CureEcho("[StepsOfFaith] === STEPS OF FAITH HANDLER COMPLETE ===")
 end
 
+--┌──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+--│ CureAleportPostMoogle()
+--│ Executes the Aleport Post Moogle interaction (Quest 245, Sequence 3)
+--│
+--│ Function:
+--│   - Moves to the Delivery Moogle in Aleport
+--│   - Opens the Letter List window
+--│   - Reads and confirms the mail message
+--│   - Closes all dialogs
+--│
+--│ Usage:
+--│   This function is automatically called by Quest Companion
+--│   when Quest 245 at Sequence 3 is detected.
+--│
+--│ Note:
+--│   The function should only be executed ONCE per quest.
+--│   The calling code must set a flag to prevent multiple executions.
+--└──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+function CureAleportPostMoogle()
+    CureEcho("[AleportPostMoogle] === STARTING POST MOOGLE INTERACTION ===")
+    
+    -- Move to Delivery Moogle
+    CureEcho("[AleportPostMoogle] Moving to Delivery Moogle...")
+    CureMovetoXA(279.79647827148, -24.997055053711, 230.43823242188)
+    
+    -- Target and Interact
+    CureTarget("Delivery Moogle")
+    CureSleep(0.1)
+    CureInteract()
+    CureSleep(0.2)
+    
+    -- Open Letter List
+    CureEcho("[AleportPostMoogle] Opening Letter List...")
+    CureSleep(0.1)
+    CureCallback("LetterList true 0 0 Undefined 0")
+    CureSleep(0.1)
+    
+    -- Open Letter Viewer
+    CureEcho("[AleportPostMoogle] Opening letter...")
+    CureCallback("LetterViewer true 1")
+    CureSleep(0.1)
+    
+    -- Read letter (click through 4x)
+    CureEcho("[AleportPostMoogle] Reading letter...")
+    CureCallback("LetterViewer true 4")
+    CureSleep(0.1)
+    CureCallback("LetterViewer true 4")
+    CureSleep(0.1)
+    CureCallback("LetterViewer true 4")
+    CureSleep(0.1)
+    CureCallback("LetterViewer true 4")
+    CureSleep(3)
+    
+    -- Close Letter Viewer
+    CureEcho("[AleportPostMoogle] Closing letter...")
+    CureCallback("LetterViewer true 2")
+    CureSleep(3)
+    
+    -- Confirm dialog
+    CureSelectYesno()
+    CureSleep(1)
+    
+    -- Close Letter List
+    CureEcho("[AleportPostMoogle] Closing Letter List...")
+    CureCallback("LetterList true -1 Undefinded Undefined Undefined")
+    CureSleep(0.1)
+    
+    CureEcho("[AleportPostMoogle] === POST MOOGLE INTERACTION COMPLETE ===")
+    return true
+end
 
 
 -- ═══════════════════════════════════════════════════════════════════════════════════════════════════════════════════
@@ -3542,5 +3612,4 @@ QuestRunMap = {
     ["2354-6"] = "/ad run regular 1114 1",
     ["2469-4"] = "/ad run regular 1142 1",
 }
-
 
